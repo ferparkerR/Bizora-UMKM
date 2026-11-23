@@ -1,0 +1,821 @@
+
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bizora - Smart Business Dashboard</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;600;700;800&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+--primary:#635bff;
+--primary-light:#eeedff;
+--bg:#f6f7fb;
+--white:#fff;
+--text:#192230;
+--muted:#8490a2;
+--border:#e9edf3;
+--green:#16a34a;
+--red:#ef4444;
+}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
+button,input,select{font:inherit}
+button{cursor:pointer;border:0}
+.app{display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{
+width:240px;background:#fff;border-right:1px solid var(--border);
+position:fixed;top:0;left:0;height:100vh;padding:25px 16px;
+z-index:20;display:flex;flex-direction:column
+}
+.logo{display:flex;align-items:center;gap:11px;padding:0 10px;margin-bottom:35px}
+.logo-icon{width:42px;height:42px;background:var(--primary);color:white;
+border-radius:14px;display:grid;place-items:center;font-size:23px;font-weight:800}
+.logo-name{font-size:22px;font-family:Manrope;font-weight:800}
+.logo-name span{color:var(--primary)}
+.nav-label{font-size:10px;font-weight:800;letter-spacing:1.5px;color:#a5adba;padding:0 12px;margin:22px 0 10px}
+.nav-item{display:flex;align-items:center;gap:12px;padding:13px 14px;
+border-radius:12px;color:#707b8c;margin-bottom:4px;font-size:14px;font-weight:600;transition:.2s}
+.nav-item:hover{background:#f6f5ff;color:var(--primary)}
+.nav-item.active{background:var(--primary-light);color:var(--primary)}
+.nav-icon{font-size:18px;width:23px}
+.sidebar-bottom{margin-top:auto;padding:15px 10px;border-top:1px solid var(--border)}
+.user{display:flex;align-items:center;gap:10px}
+.avatar{width:38px;height:38px;background:#e9e7ff;color:var(--primary);
+border-radius:50%;display:grid;place-items:center;font-weight:800}
+.user-name{font-weight:700;font-size:13px}
+.user-sub{font-size:11px;color:var(--muted);margin-top:3px}
+
+/* MAIN */
+.main{margin-left:240px;width:calc(100% - 240px);padding:30px}
+.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.page-title{font-family:Manrope;font-size:25px;font-weight:800}
+.page-subtitle{font-size:13px;color:var(--muted);margin-top:5px}
+.top-right{display:flex;align-items:center;gap:12px}
+.date{padding:10px 13px;background:white;border:1px solid var(--border);
+border-radius:10px;color:var(--muted);font-size:12px}
+.mobile-menu{display:none}
+
+/* CONTENT */
+.section{display:none}
+.section.active{display:block}
+.welcome{background:linear-gradient(120deg,#635bff,#827aff);
+border-radius:20px;padding:27px;color:white;margin-bottom:23px;position:relative;overflow:hidden}
+.welcome h2{font-family:Manrope;font-size:23px;margin-bottom:8px}
+.welcome p{font-size:13px;opacity:.85}
+.welcome-icon{position:absolute;right:25px;top:15px;font-size:75px;opacity:.16}
+
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:22px}
+.stat{background:white;border:1px solid var(--border);border-radius:17px;padding:20px}
+.stat-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+.stat-icon{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-size:19px}
+.stat-label{font-size:12px;color:var(--muted)}
+.stat-value{font-family:Manrope;font-weight:800;font-size:22px;margin-bottom:7px}
+.stat-foot{font-size:11px;color:var(--muted)}
+.green{color:var(--green)}
+.red{color:var(--red)}
+
+.grid{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-bottom:22px}
+.panel{background:white;border:1px solid var(--border);border-radius:18px;padding:22px}
+.panel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px}
+.panel-head h3{font-family:Manrope;font-size:15px;font-weight:800}
+.panel-head select{border:1px solid var(--border);padding:8px;border-radius:9px;background:white;color:#687386}
+.chart{height:245px;width:100%}
+canvas{width:100%;height:100%}
+
+.activity{display:flex;align-items:center;justify-content:space-between;padding:13px 0;border-bottom:1px solid #f0f2f5}
+.activity:last-child{border-bottom:0}
+.activity-left{display:flex;align-items:center;gap:11px}
+.activity-icon{width:38px;height:38px;border-radius:11px;background:#f3f4f8;display:grid;place-items:center}
+.activity-name{font-size:13px;font-weight:700}
+.activity-date{font-size:11px;color:var(--muted);margin-top:4px}
+.activity-amount{font-size:12px;font-weight:700}
+
+.table-box{background:white;border:1px solid var(--border);border-radius:18px;overflow:hidden}
+.table-head{padding:20px;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.table-head h3{font-family:Manrope;font-size:16px}
+.table-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:580px}
+th{text-align:left;padding:13px 20px;background:#fafbfc;color:var(--muted);
+font-size:10px;text-transform:uppercase;letter-spacing:.6px}
+td{padding:15px 20px;border-top:1px solid #f0f2f5;font-size:13px}
+.empty{text-align:center;padding:35px;color:var(--muted)}
+.badge{padding:5px 9px;border-radius:20px;font-size:11px;font-weight:700}
+.badge-green{background:#eaf9ef;color:#16a34a}
+.badge-red{background:#fff0f0;color:#ef4444}
+.delete{background:#fff0f0;color:red;padding:7px 10px;border-radius:8px;font-size:11px}
+
+.btn{background:var(--primary);color:white;padding:11px 15px;border-radius:10px;font-size:12px;font-weight:700}
+.btn:hover{opacity:.85}
+.btn-light{background:white;border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:10px;font-weight:600}
+.btn-danger{background:#fff0f0;color:red;padding:10px;border-radius:10px}
+
+/* FORMS */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.form-group{margin-bottom:15px}
+.form-group.full{grid-column:1/-1}
+.form-group label{display:block;font-size:12px;font-weight:700;margin-bottom:7px}
+.form-group input,.form-group select{
+width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;background:white;outline:none
+}
+.form-group input:focus,.form-group select:focus{border-color:var(--primary)}
+.modal{position:fixed;inset:0;background:rgba(20,30,50,.45);z-index:100;
+display:none;align-items:center;justify-content:center;padding:15px}
+.modal.show{display:flex}
+.modal-box{background:white;width:100%;max-width:470px;border-radius:20px;padding:24px;max-height:90vh;overflow:auto}
+.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
+.modal-head h3{font-family:Manrope}
+.close{background:#f1f2f5;width:32px;height:32px;border-radius:9px;font-size:18px}
+
+/* PRODUCTS */
+.product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.product-card{background:white;border:1px solid var(--border);border-radius:16px;padding:20px}
+.product-emoji{font-size:32px;margin-bottom:15px}
+.product-card h3{font-size:14px;margin-bottom:6px}
+.product-price{color:var(--primary);font-weight:800;font-size:15px}
+.product-stock{font-size:12px;color:var(--muted);margin-top:8px}
+
+/* REPORT */
+.report-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.report-card{background:white;border:1px solid var(--border);padding:22px;border-radius:17px}
+.report-card p{color:var(--muted);font-size:12px;margin-bottom:10px}
+.report-card h2{font-family:Manrope;font-size:25px}
+
+/* SETTINGS */
+.setting-card{background:white;border:1px solid var(--border);padding:22px;border-radius:17px;margin-bottom:15px}
+.setting-card h3{margin-bottom:10px;font-family:Manrope}
+.setting-card p{font-size:13px;color:var(--muted);margin-bottom:15px}
+
+@media(max-width:1100px){
+.stats{grid-template-columns:repeat(2,1fr)}
+.product-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:750px){
+.sidebar{width:70px;padding:18px 8px}
+.logo{justify-content:center;padding:0;margin-bottom:25px}
+.logo-name,.nav-label,.nav-item span:not(.nav-icon),.sidebar-bottom .user-info{display:none}
+.nav-item{justify-content:center;padding:13px 8px}
+.nav-icon{width:auto;font-size:20px}
+.sidebar-bottom{left:8px;right:8px}
+.user{justify-content:center}
+.main{margin-left:70px;width:calc(100% - 70px);padding:18px 13px}
+.topbar{align-items:flex-start}
+.page-title{font-size:20px}
+.top-right{gap:5px}
+.date{display:none}
+.stats{gap:10px}
+.stat{padding:15px}
+.stat-value{font-size:17px}
+.grid{grid-template-columns:1fr}
+.welcome{padding:22px}
+.welcome h2{font-size:19px}
+.welcome-icon{font-size:55px}
+.panel{padding:17px}
+.product-grid{grid-template-columns:1fr 1fr}
+.report-grid{grid-template-columns:1fr}
+}
+@media(max-width:420px){
+.stats{grid-template-columns:1fr 1fr}
+.stat-value{font-size:15px}
+.product-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-icon">B</div>
+    <div class="logo-name">biz<span>ora</span></div>
+  </div>
+
+  <div class="nav-label">MENU UTAMA</div>
+  <div class="nav-item active" data-page="dashboard"><span class="nav-icon">▦</span><span>Dashboard</span></div>
+  <div class="nav-item" data-page="transactions"><span class="nav-icon">↔</span><span>Transaksi</span></div>
+  <div class="nav-item" data-page="products"><span class="nav-icon">▣</span><span>Produk</span></div>
+  <div class="nav-item" data-page="expenses"><span class="nav-icon">↘</span><span>Pengeluaran</span></div>
+
+  <div class="nav-label">ANALISIS</div>
+  <div class="nav-item" data-page="reports"><span class="nav-icon">▤</span><span>Laporan</span></div>
+
+  <div class="nav-label">LAINNYA</div>
+  <div class="nav-item" data-page="settings"><span class="nav-icon">⚙</span><span>Pengaturan</span></div>
+
+  <div class="sidebar-bottom">
+    <div class="user">
+      <div class="avatar">B</div>
+      <div class="user-info">
+        <div class="user-name">Pemilik Usaha</div>
+        <div class="user-sub">Bizora Starter</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="page-title" id="pageTitle">Dashboard</div>
+      <div class="page-subtitle" id="pageSubtitle">Ringkasan performa usaha kamu</div>
+    </div>
+    <div class="top-right">
+      <div class="date" id="dateDisplay"></div>
+      <div class="avatar">B</div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <section class="section active" id="dashboard">
+    <div class="welcome">
+      <div class="welcome-icon">📈</div>
+      <h2>Selamat datang di Bizora 👋</h2>
+      <p>Pantau bisnis kamu, ambil keputusan lebih cerdas, dan tumbuh lebih cepat.</p>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-top">
+          <div class="stat-icon" style="background:#eeedff">💰</div>
+          <span class="stat-label">Hari ini</span>
+        </div>
+        <div class="stat-value" id="todayRevenue">Rp0</div>
+        <div class="stat-foot">Total penjualan hari ini</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-top">
+          <div class="stat-icon" style="background:#eaf9ef">📊</div>
+          <span class="stat-label">Bulan ini</span>
+        </div>
+        <div class="stat-value" id="monthRevenue">Rp0</div>
+        <div class="stat-foot">Total penjualan bulan ini</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-top">
+          <div class="stat-icon" style="background:#fff3e6">💵</div>
+          <span class="stat-label">Profit</span>
+        </div>
+        <div class="stat-value" id="monthProfit">Rp0</div>
+        <div class="stat-foot">Estimasi keuntungan bulan ini</div>
+      </div>
+
+      <div class="stat">
+        <div class="stat-top">
+          <div class="stat-icon" style="background:#e8f5ff">🛒</div>
+          <span class="stat-label">Transaksi</span>
+        </div>
+        <div class="stat-value" id="totalTransactions">0</div>
+        <div class="stat-foot">Total transaksi bulan ini</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Grafik Penjualan</h3>
+          <select id="chartFilter">
+            <option value="7">7 hari terakhir</option>
+            <option value="30">30 hari terakhir</option>
+          </select>
+        </div>
+        <div class="chart"><canvas id="salesChart"></canvas></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Transaksi Terbaru</h3></div>
+        <div id="recentTransactions"></div>
+      </div>
+    </div>
+
+    <div class="table-box">
+      <div class="table-head">
+        <h3>Ringkasan Transaksi</h3>
+        <button class="btn" onclick="openTransactionModal()">+ Tambah transaksi</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Produk</th><th>Tanggal</th><th>Jumlah</th><th>Total</th><th>Status</th></tr></thead>
+          <tbody id="dashboardTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- TRANSACTIONS -->
+  <section class="section" id="transactions">
+    <div class="table-box">
+      <div class="table-head">
+        <h3>Semua Transaksi</h3>
+        <button class="btn" onclick="openTransactionModal()">+ Transaksi baru</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Produk</th><th>Tanggal</th><th>Jumlah</th><th>Total</th><th>Aksi</th></tr></thead>
+          <tbody id="transactionTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRODUCTS -->
+  <section class="section" id="products">
+    <div class="table-box" style="margin-bottom:20px">
+      <div class="table-head">
+        <h3>Daftar Produk</h3>
+        <button class="btn" onclick="openProductModal()">+ Tambah produk</button>
+      </div>
+    </div>
+    <div class="product-grid" id="productGrid"></div>
+  </section>
+
+  <!-- EXPENSES -->
+  <section class="section" id="expenses">
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-label">Pengeluaran hari ini</div>
+        <div class="stat-value" id="expenseToday">Rp0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Pengeluaran bulan ini</div>
+        <div class="stat-value" id="expenseMonth">Rp0</div>
+      </div>
+    </div>
+
+    <div class="table-box">
+      <div class="table-head">
+        <h3>Daftar Pengeluaran</h3>
+        <button class="btn" onclick="openExpenseModal()">+ Tambah pengeluaran</button>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Nama</th><th>Kategori</th><th>Tanggal</th><th>Jumlah</th><th>Aksi</th></tr></thead>
+          <tbody id="expenseTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- REPORTS -->
+  <section class="section" id="reports">
+    <div class="report-grid">
+      <div class="report-card"><p>Total Penjualan</p><h2 id="reportRevenue">Rp0</h2></div>
+      <div class="report-card"><p>Total Pengeluaran</p><h2 id="reportExpense">Rp0</h2></div>
+      <div class="report-card"><p>Estimasi Profit</p><h2 id="reportProfit">Rp0</h2></div>
+      <div class="report-card"><p>Total Transaksi</p><h2 id="reportCount">0</h2></div>
+    </div>
+
+    <div class="panel" style="margin-top:20px">
+      <div class="panel-head"><h3>Analisis Usaha</h3></div>
+      <div id="analysisText" style="font-size:14px;line-height:1.8;color:#687386"></div>
+    </div>
+  </section>
+
+  <!-- SETTINGS -->
+  <section class="section" id="settings">
+    <div class="setting-card">
+      <h3>Pengaturan Bizora</h3>
+      <p>Kelola data dashboard usaha kamu.</p>
+      <div class="form-group">
+        <label>Nama usaha</label>
+        <input id="businessName" placeholder="Nama usaha kamu">
+      </div>
+      <button class="btn" onclick="saveSettings()">Simpan pengaturan</button>
+    </div>
+
+    <div class="setting-card">
+      <h3>Data Dashboard</h3>
+      <p>Data Bizora tersimpan secara lokal di browser yang kamu gunakan.</p>
+      <button class="btn-light" onclick="exportData()">📥 Export data</button>
+      <button class="btn-danger" onclick="resetData()">🗑 Reset semua data</button>
+    </div>
+  </section>
+</main>
+</div>
+
+<!-- TRANSACTION MODAL -->
+<div class="modal" id="transactionModal">
+<div class="modal-box">
+<div class="modal-head"><h3>Tambah Transaksi</h3><button class="close" onclick="closeModal('transactionModal')">×</button></div>
+<form id="transactionForm">
+<div class="form-group"><label>Nama produk</label><input id="txName" required placeholder="Contoh: Kopi susu"></div>
+<div class="form-grid">
+<div class="form-group"><label>Harga jual</label><input type="number" id="txPrice" required min="0"></div>
+<div class="form-group"><label>Modal per produk</label><input type="number" id="txCost" value="0" min="0"></div>
+<div class="form-group"><label>Jumlah</label><input type="number" id="txQty" required min="1" value="1"></div>
+<div class="form-group"><label>Tanggal</label><input type="date" id="txDate" required></div>
+</div>
+<button class="btn" style="width:100%">Simpan transaksi</button>
+</form>
+</div>
+</div>
+
+<!-- PRODUCT MODAL -->
+<div class="modal" id="productModal">
+<div class="modal-box">
+<div class="modal-head"><h3>Tambah Produk</h3><button class="close" onclick="closeModal('productModal')">×</button></div>
+<form id="productForm">
+<div class="form-group"><label>Nama produk</label><input id="pName" required></div>
+<div class="form-grid">
+<div class="form-group"><label>Harga jual</label><input type="number" id="pPrice" required min="0"></div>
+<div class="form-group"><label>Modal</label><input type="number" id="pCost" min="0" value="0"></div>
+<div class="form-group"><label>Stok</label><input type="number" id="pStock" min="0" value="0"></div>
+<div class="form-group"><label>Emoji</label><input id="pEmoji" value="📦"></div>
+</div>
+<button class="btn" style="width:100%">Simpan produk</button>
+</form>
+</div>
+</div>
+
+<!-- EXPENSE MODAL -->
+<div class="modal" id="expenseModal">
+<div class="modal-box">
+<div class="modal-head"><h3>Tambah Pengeluaran</h3><button class="close" onclick="closeModal('expenseModal')">×</button></div>
+<form id="expenseForm">
+<div class="form-group"><label>Nama pengeluaran</label><input id="eName" required placeholder="Contoh: Beli bahan baku"></div>
+<div class="form-grid">
+<div class="form-group"><label>Kategori</label>
+<select id="eCategory"><option>Bahan baku</option><option>Operasional</option><option>Transportasi</option><option>Gaji</option><option>Lainnya</option></select></div>
+<div class="form-group"><label>Jumlah</label><input type="number" id="eAmount" required min="0"></div>
+<div class="form-group full"><label>Tanggal</label><input type="date" id="eDate" required></div>
+</div>
+<button class="btn" style="width:100%">Simpan pengeluaran</button>
+</form>
+</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const money=n=>'Rp'+Number(n||0).toLocaleString('id-ID');
+const today=()=>new Date().toISOString().slice(0,10);
+
+let transactions=JSON.parse(localStorage.getItem('bizora_transactions')||'[]');
+let products=JSON.parse(localStorage.getItem('bizora_products')||'[]');
+let expenses=JSON.parse(localStorage.getItem('bizora_expenses')||'[]');
+let settings=JSON.parse(localStorage.getItem('bizora_settings')||'{}');
+
+function saveData(){
+localStorage.setItem('bizora_transactions',JSON.stringify(transactions));
+localStorage.setItem('bizora_products',JSON.stringify(products));
+localStorage.setItem('bizora_expenses',JSON.stringify(expenses));
+localStorage.setItem('bizora_settings',JSON.stringify(settings));
+}
+
+function dateFormat(d){
+return new Date(d+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'});
+}
+
+function currentMonth(d){
+return d&&d.slice(0,7)===today().slice(0,7);
+}
+
+function currentDay(d){
+return d===today();
+}
+
+function getRevenue(list){
+return list.reduce((s,t)=>s+(Number(t.price)*Number(t.qty)),0);
+}
+
+function getProfit(list){
+return list.reduce((s,t)=>s+((Number(t.price)-Number(t.cost))*Number(t.qty)),0);
+}
+
+function getMonthTransactions(){
+return transactions.filter(t=>currentMonth(t.date));
+}
+
+function getMonthExpenses(){
+return expenses.filter(e=>currentMonth(e.date));
+}
+
+/* NAVIGATION */
+document.querySelectorAll('.nav-item').forEach(item=>{
+item.addEventListener('click',()=>{
+document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+item.classList.add('active');
+document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+$(item.dataset.page).classList.add('active');
+
+const titles={
+dashboard:['Dashboard','Ringkasan performa usaha kamu'],
+transactions:['Transaksi','Kelola semua transaksi usaha'],
+products:['Produk','Kelola katalog produk kamu'],
+expenses:['Pengeluaran','Pantau biaya operasional'],
+reports:['Laporan','Analisis performa bisnis'],
+settings:['Pengaturan','Atur dashboard Bizora']
+};
+
+$('pageTitle').textContent=titles[item.dataset.page][0];
+$('pageSubtitle').textContent=titles[item.dataset.page][1];
+renderAll();
+});
+});
+
+/* MODALS */
+function openTransactionModal(){
+$('txDate').value=today();
+$('transactionModal').classList.add('show');
+}
+function openProductModal(){
+$('productModal').classList.add('show');
+}
+function openExpenseModal(){
+$('eDate').value=today();
+$('expenseModal').classList.add('show');
+}
+function closeModal(id){
+$(id).classList.remove('show');
+}
+document.querySelectorAll('.modal').forEach(m=>{
+m.addEventListener('click',e=>{
+if(e.target===m)m.classList.remove('show');
+});
+});
+
+/* TRANSACTION */
+$('transactionForm').addEventListener('submit',e=>{
+e.preventDefault();
+transactions.unshift({
+id:Date.now(),
+name:$('txName').value,
+price:Number($('txPrice').value),
+cost:Number($('txCost').value),
+qty:Number($('txQty').value),
+date:$('txDate').value
+});
+saveData();
+e.target.reset();
+closeModal('transactionModal');
+renderAll();
+});
+
+/* PRODUCT */
+$('productForm').addEventListener('submit',e=>{
+e.preventDefault();
+products.push({
+id:Date.now(),
+name:$('pName').value,
+price:Number($('pPrice').value),
+cost:Number($('pCost').value),
+stock:Number($('pStock').value),
+emoji:$('pEmoji').value||'📦'
+});
+saveData();
+e.target.reset();
+closeModal('productModal');
+renderAll();
+});
+
+/* EXPENSE */
+$('expenseForm').addEventListener('submit',e=>{
+e.preventDefault();
+expenses.unshift({
+id:Date.now(),
+name:$('eName').value,
+category:$('eCategory').value,
+amount:Number($('eAmount').value),
+date:$('eDate').value
+});
+saveData();
+e.target.reset();
+closeModal('expenseModal');
+renderAll();
+});
+
+/* DELETE */
+function deleteTransaction(id){
+if(!confirm('Hapus transaksi ini?'))return;
+transactions=transactions.filter(t=>t.id!==id);
+saveData();renderAll();
+}
+function deleteProduct(id){
+if(!confirm('Hapus produk ini?'))return;
+products=products.filter(p=>p.id!==id);
+saveData();renderAll();
+}
+function deleteExpense(id){
+if(!confirm('Hapus pengeluaran ini?'))return;
+expenses=expenses.filter(e=>e.id!==id);
+saveData();renderAll();
+}
+
+/* DASHBOARD */
+function renderStats(){
+const todayTx=transactions.filter(t=>currentDay(t.date));
+const monthTx=getMonthTransactions();
+const monthExp=getMonthExpenses();
+
+$('todayRevenue').textContent=money(getRevenue(todayTx));
+$('monthRevenue').textContent=money(getRevenue(monthTx));
+$('monthProfit').textContent=money(getProfit(monthTx)-monthExp.reduce((s,e)=>s+e.amount,0));
+$('totalTransactions').textContent=monthTx.length;
+
+$('expenseToday').textContent=money(expenses.filter(e=>currentDay(e.date)).reduce((s,e)=>s+e.amount,0));
+$('expenseMonth').textContent=money(monthExp.reduce((s,e)=>s+e.amount,0));
+
+$('reportRevenue').textContent=money(getRevenue(monthTx));
+$('reportExpense').textContent=money(monthExp.reduce((s,e)=>s+e.amount,0));
+$('reportProfit').textContent=money(getProfit(monthTx)-monthExp.reduce((s,e)=>s+e.amount,0));
+$('reportCount').textContent=monthTx.length;
+
+let profit=getProfit(monthTx)-monthExp.reduce((s,e)=>s+e.amount,0);
+let revenue=getRevenue(monthTx);
+
+$('analysisText').innerHTML=`
+<p>📊 Total penjualan bulan ini adalah <b>${money(revenue)}</b>.</p>
+<p>💰 Estimasi profit setelah modal dan pengeluaran adalah <b>${money(profit)}</b>.</p>
+<p>🛒 Kamu memiliki <b>${monthTx.length} transaksi</b> pada bulan ini.</p>
+<p>💡 ${profit>0?'Bisnis kamu menghasilkan profit. Pertahankan performa dan evaluasi produk terlaris.':'Mulai catat transaksi dan pengeluaran agar Bizora dapat membantu menganalisis bisnis kamu.'}</p>
+`;
+}
+
+/* TABLE */
+function renderTables(){
+let rows=transactions.slice(0,10);
+$('dashboardTable').innerHTML=rows.length?rows.map(t=>`
+<tr>
+<td><b>${escapeHtml(t.name)}</b></td>
+<td>${dateFormat(t.date)}</td>
+<td>${t.qty}</td>
+<td><b>${money(t.price*t.qty)}</b></td>
+<td><span class="badge badge-green">Selesai</span></td>
+</tr>`).join(''):`<tr><td colspan="5" class="empty">Belum ada transaksi</td></tr>`;
+
+$('transactionTable').innerHTML=transactions.length?transactions.map(t=>`
+<tr>
+<td><b>${escapeHtml(t.name)}</b></td>
+<td>${dateFormat(t.date)}</td>
+<td>${t.qty}</td>
+<td>${money(t.price*t.qty)}</td>
+<td><button class="delete" onclick="deleteTransaction(${t.id})">Hapus</button></td>
+</tr>`).join(''):`<tr><td colspan="5" class="empty">Belum ada transaksi</td></tr>`;
+
+$('expenseTable').innerHTML=expenses.length?expenses.map(e=>`
+<tr>
+<td><b>${escapeHtml(e.name)}</b></td>
+<td>${escapeHtml(e.category)}</td>
+<td>${dateFormat(e.date)}</td>
+<td>${money(e.amount)}</td>
+<td><button class="delete" onclick="deleteExpense(${e.id})">Hapus</button></td>
+</tr>`).join(''):`<tr><td colspan="5" class="empty">Belum ada pengeluaran</td></tr>`;
+}
+
+/* RECENT */
+function renderRecent(){
+let recent=transactions.slice(0,5);
+$('recentTransactions').innerHTML=recent.length?recent.map(t=>`
+<div class="activity">
+<div class="activity-left">
+<div class="activity-icon">🛒</div>
+<div><div class="activity-name">${escapeHtml(t.name)}</div><div class="activity-date">${dateFormat(t.date)}</div></div>
+</div>
+<div class="activity-amount">${money(t.price*t.qty)}</div>
+</div>`).join(''):`<div class="empty">Belum ada transaksi</div>`;
+}
+
+/* PRODUCTS */
+function renderProducts(){
+$('productGrid').innerHTML=products.length?products.map(p=>`
+<div class="product-card">
+<div class="product-emoji">${escapeHtml(p.emoji)}</div>
+<h3>${escapeHtml(p.name)}</h3>
+<div class="product-price">${money(p.price)}</div>
+<div class="product-stock">Stok: ${p.stock}</div>
+<div style="margin-top:15px;display:flex;justify-content:space-between;align-items:center">
+<span style="font-size:12px;color:#8791a1">Modal ${money(p.cost)}</span>
+<button class="delete" onclick="deleteProduct(${p.id})">Hapus</button>
+</div>`).join(''):`<div class="empty" style="grid-column:1/-1">Belum ada produk. Tambahkan produk pertama kamu.</div>`;
+}
+
+/* CHART */
+function drawChart(){
+let canvas=$('salesChart');
+let ctx=canvas.getContext('2d');
+let rect=canvas.getBoundingClientRect();
+canvas.width=rect.width*devicePixelRatio;
+canvas.height=rect.height*devicePixelRatio;
+ctx.scale(devicePixelRatio,devicePixelRatio);
+
+let w=rect.width,h=rect.height;
+ctx.clearRect(0,0,w,h);
+
+let days=Number($('chartFilter').value);
+let data=[];
+let labels=[];
+
+for(let i=days-1;i>=0;i--){
+let d=new Date();
+d.setDate(d.getDate()-i);
+let date=d.toISOString().slice(0,10);
+data.push(getRevenue(transactions.filter(t=>t.date===date)));
+labels.push(days===7?d.toLocaleDateString('id-ID',{weekday:'short'}):d.getDate());
+}
+
+let max=Math.max(...data,100);
+let padding={left:40,right:10,top:15,bottom:30};
+let cw=w-padding.left-padding.right;
+let ch=h-padding.top-padding.bottom;
+
+ctx.font='11px DM Sans';
+ctx.fillStyle='#94a0b0';
+ctx.textAlign='right';
+
+for(let i=0;i<5;i++){
+let y=padding.top+ch*i/4;
+ctx.strokeStyle='#edf0f5';
+ctx.beginPath();ctx.moveTo(padding.left,y);ctx.lineTo(w-padding.right,y);ctx.stroke();
+ctx.fillText((max*(1-i/4)).toLocaleString('id-ID'),padding.left-6,y+4);
+}
+
+let points=data.map((v,i)=>({
+x:padding.left+(data.length===1?cw/2:i*cw/(data.length-1)),
+y:padding.top+ch-(v/max)*ch
+}));
+
+ctx.beginPath();
+points.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+ctx.strokeStyle='#635bff';
+ctx.lineWidth=3;
+ctx.lineJoin='round';
+ctx.stroke();
+
+ctx.lineTo(points[points.length-1].x,padding.top+ch);
+ctx.lineTo(points[0].x,padding.top+ch);
+ctx.closePath();
+let gradient=ctx.createLinearGradient(0,padding.top,0,h);
+gradient.addColorStop(0,'rgba(99,91,255,.18)');
+gradient.addColorStop(1,'rgba(99,91,255,0)');
+ctx.fillStyle=gradient;
+ctx.fill();
+
+points.forEach(p=>{
+ctx.beginPath();
+ctx.arc(p.x,p.y,4,0,Math.PI*2);
+ctx.fillStyle='#635bff';
+ctx.fill();
+});
+
+ctx.textAlign='center';
+ctx.fillStyle='#8791a1';
+labels.forEach((l,i)=>{
+let x=padding.left+(labels.length===1?cw/2:i*cw/(labels.length-1));
+ctx.fillText(l,x,h-8);
+});
+}
+
+$('chartFilter').addEventListener('change',drawChart);
+
+/* SETTINGS */
+function saveSettings(){
+settings.businessName=$('businessName').value;
+saveData();
+alert('Pengaturan berhasil disimpan!');
+}
+function exportData(){
+let data={transactions,products,expenses,settings};
+let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+let url=URL.createObjectURL(blob);
+let a=document.createElement('a');
+a.href=url;a.download='bizora-data.json';a.click();
+URL.revokeObjectURL(url);
+}
+function resetData(){
+if(!confirm('Semua data akan dihapus. Lanjutkan?'))return;
+transactions=[];products=[];expenses=[];
+saveData();renderAll();
+alert('Data berhasil direset');
+}
+
+/* HELPERS */
+function escapeHtml(s){
+return String(s??'').replace(/[&<>"']/g,m=>({
+'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+}[m]));
+}
+
+function renderAll(){
+renderStats();
+renderTables();
+renderRecent();
+renderProducts();
+drawChart();
+$('businessName').value=settings.businessName||'';
+}
+
+$('dateDisplay').textContent=new Date().toLocaleDateString('id-ID',{
+weekday:'long',day:'numeric',month:'long',year:'numeric'
+});
+
+renderAll();
+window.addEventListener('resize',drawChart);
+</script>
+</body>
+</html>
