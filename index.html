@@ -2307,6 +2307,7 @@ async function loadTransactions() {
 
 function transactionTotal(t) {
   return Number(
+    t.amount ??
     t.total_amount ??
     t.total ??
     t.grand_total ??
@@ -3119,14 +3120,16 @@ function doPrintReceipt() {
 function renderDashboard() {
   const today = todayString();
 
-  const todayTransactions = transactions.filter(t =>
-    String(transactionDate(t) || "").slice(0, 10) === today
-  );
+  
+const todayTransactions = transactions.filter(t =>
+  String(transactionDate(t) || "").slice(0, 10) === today &&
+  (!t.type || t.type === "sale")
+);
 
-  const todaySales = todayTransactions.reduce(
-    (sum, t) => sum + transactionTotal(t),
-    0
-  );
+const todaySales = todayTransactions.reduce(
+  (sum, t) => sum + transactionTotal(t),
+  0
+);
 
   const todayExpenses = expenses
     .filter(x =>
