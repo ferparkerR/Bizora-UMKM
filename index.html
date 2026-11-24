@@ -707,60 +707,39 @@ function openProductModal(id=null){
 }
 
 function previewProductImage(event){
-  const file=event.target.files?.[0];
-  if(!file)return;
-  if(!file.type.startsWith("image/"))return toast("File harus berupa gambar.");
-  productImageFile=file;
-  const reader=new FileReader();
-  reader.onload=()=>{$("productImagePreview").innerHTML=`<img src="${reader.result}" style="max-height:120px">`};
+  const file = event.target.files?.[0];
+  if(!file) return;
+
+  if(!file.type.startsWith("image/")){
+    toast("File harus berupa gambar.");
+    event.target.value = "";
+    return;
+  }
+
+  if(file.size > 5 * 1024 * 1024){
+    toast("Ukuran foto maksimal 5 MB.");
+    event.target.value = "";
+    return;
+  }
+
+  productImageFile = file;
+
+  const reader = new FileReader();
+
+  reader.onload = () => {
+    $("productImagePreview").innerHTML = `
+      <img
+        src="${reader.result}"
+        style="max-height:120px;max-width:100%;object-fit:contain;border-radius:10px"
+      >
+      <div class="small muted" style="margin-top:8px">
+        ${escapeHTML(file.name)}
+      </div>
+    `;
+  };
+
   reader.readAsDataURL(file);
 }
-
-$("productForm").addEventListener("submit",async e=>{
-  e.preventDefault();
-  const id=$("productId").value;
-  const btn=$("saveProductBtn");
-  btn.disabled=true;
-  btn.textContent="Menyimpan...";
-
-  try{
-    const old=products.find(p=>String(p.id)===String(id));
-    let image=old?.image_url||null;
-    if(productImageFile)image=await uploadImage("product-images",productImageFile);
-
-    const payload={
-      business_id:business.id,
-      name:$("productName").value.trim(),
-      category:$("productCategory").value.trim(),
-      barcode:$("productBarcode").value.trim(),
-      price:Number($("productPrice").value),
-      stock:Number($("productStock").value),
-      image_url:image
-    };
-
-    let result;
-    if(id){
-      result=await sb.from("products").update(payload).eq("id",id)
-        .eq("business_id",business.id);
-    }else{
-      result=await sb.from("products").insert(payload);
-    }
-    if(result.error)throw result.error;
-
-    await loadProducts();
-
-    if(id&&$("productFeatured").checked)setFeatured(id,true);
-    if(id&&!$("productFeatured").checked)setFeatured(id,false);
-
-    closeModal("productModal");
-    toast("Produk berhasil disimpan.");
-  }catch(err){
-    toast("Gagal menyimpan produk: "+err.message);
-  }finally{
-    btn.disabled=false;
-    btn.textContent="Simpan Produk";
-  }
-});
 
 function renderProducts(){
   const search=($("productSearch")?.value||"").toLowerCase();
