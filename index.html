@@ -3609,9 +3609,11 @@ if (document.readyState === "loading") {
   initializeBackupButtons();
 }
   
+
 /* =========================================
    BIZORA AI CHAT
    Gemini API melalui Supabase Edge Function
+   FIXED VERSION
 ========================================= */
 
 (function initBizoraAI() {
@@ -3671,8 +3673,14 @@ if (document.readyState === "loading") {
       }
 
       @keyframes aiEnter {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       .ai-header {
@@ -3858,7 +3866,7 @@ if (document.readyState === "loading") {
 
       <div class="ai-messages">
         <div class="ai-message bot">
-          Halo! Saya Bizora AI 👋
+          Halo! Saya Bizora AI.
 
           Saya siap membantu mengembangkan bisnis Anda.
           Ada yang ingin Anda konsultasikan?
@@ -3916,6 +3924,7 @@ if (document.readyState === "loading") {
 
   function togglePanel() {
     panel.classList.toggle("open");
+
     if (panel.classList.contains("open")) {
       setTimeout(() => input.focus(), 100);
     }
@@ -3933,7 +3942,10 @@ if (document.readyState === "loading") {
     if (!message || busy) return;
 
     if (typeof sb === "undefined" || !sb?.functions) {
-      addMessage("Koneksi Supabase belum tersedia.", "bot");
+      addMessage(
+        "Koneksi Supabase belum tersedia. Silakan login ulang.",
+        "bot"
+      );
       return;
     }
 
@@ -3958,15 +3970,24 @@ if (document.readyState === "loading") {
         }
       );
 
-      typing.remove();
-
       if (error) {
         console.error("Bizora AI invoke error:", error);
-        throw new Error(
-          data?.details ||
-          data?.error ||
-          "Gagal menghubungi Bizora AI."
-        );
+
+        let detail = error.message || "Gagal menghubungi server.";
+
+        if (error.context instanceof Response) {
+          try {
+            const response = await error.context.clone().json();
+
+            detail =
+              response.details ||
+              response.error ||
+              response.message ||
+              detail;
+          } catch (_) {}
+        }
+
+        throw new Error(detail);
       }
 
       if (!data?.success || !data?.reply) {
@@ -3979,33 +4000,23 @@ if (document.readyState === "loading") {
 
       addMessage(data.reply, "bot");
 
-} catch (err) {
-  console.error("Bizora AI detail:", err);
+    } catch (err) {
+      console.error("Bizora AI detail:", err);
 
-  let detail = err.message || "Kesalahan tidak diketahui.";
+      addMessage(
+        "Bizora AI mengalami kendala:\n" +
+        (err.message || "Kesalahan tidak diketahui."),
+        "bot"
+      );
 
-  if (err.context instanceof Response) {
-    try {
-      const response = await err.context.clone().json();
-      detail =
-        response.details ||
-        response.error ||
-        detail;
-    } catch (_) {}
+    } finally {
+      typing.remove();
+      busy = false;
+      input.disabled = false;
+      send.disabled = false;
+      input.focus();
+    }
   }
-
-  addMessage(
-    "Bizora AI mengalami kendala:\n" + detail,
-    "bot"
-  );
-
-} finally {
-  typing.remove();
-  busy = false;
-  input.disabled = false;
-  send.disabled = false;
-  input.focus();
-}
 
   send.addEventListener("click", () => {
     sendMessage(input.value);
@@ -4024,7 +4035,6 @@ if (document.readyState === "loading") {
     });
   });
 
-  // Fungsi dapat dipanggil dari aplikasi jika diperlukan.
   window.openBizoraAI = () => {
     if (!panel.classList.contains("open")) {
       togglePanel();
