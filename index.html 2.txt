@@ -757,8 +757,7 @@ body.dark-mode .backup-warning p{color:#f5d58c}
         <div class="backup-icon">↓</div>
         <h3>Manual Backup</h3>
         <p>Unduh salinan data bisnis ke perangkat Anda.</p>
-        <button id="backupDownloadBtn">Download Backup</button>
-      </div>
+        <button id="backupDownloadBtn" onclick="alert('Klik tombol terdeteksi!')">Download Backup</button>
 
       <div class="backup-card">
         <div class="backup-icon">↑</div>
