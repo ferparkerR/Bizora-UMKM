@@ -1256,33 +1256,33 @@ function applyStoreBranding(){
 
 const color=storeProfile?.store_color||"#6366f1";
 
-selectedStoreColor=color;
-
-document.documentElement.style.setProperty(
-"--primary",
-color
-);
-
-document.documentElement.style.setProperty(
-"--primary2",
-color
-);
+document.documentElement.style.setProperty("--primary",color);
+document.documentElement.style.setProperty("--primary2",color);
 
 const storeName=
 storeProfile?.store_name||
 currentBusiness?.business_name||
 "Bizora";
 
-document.getElementById("welcome").textContent=storeName;
+const welcome=document.getElementById("welcome");
+if(welcome) welcome.textContent=storeName;
 
-document.getElementById("businessLabel").textContent=storeName;
+const businessLabel=document.getElementById("businessLabel");
+if(businessLabel) businessLabel.textContent=storeName;
 
-document.querySelector(".brand").innerHTML=
-escapeHTML(storeName)+
-'<span>.</span>';
-
+const brand=document.getElementById("dashboardBrand");
+if(brand){
+brand.innerHTML=escapeHTML(storeName)+'<span>.</span>';
 }
 
+const logo=storeProfile?.store_logo;
+
+if(logo){
+const logoHTML='<img src="'+escapeHTML(logo)+'" style="width:32px;height:32px;object-fit:cover;border-radius:9px;margin-right:9px;vertical-align:middle">';
+if(brand) brand.innerHTML=logoHTML+escapeHTML(storeName)+'<span>.</span>';
+}
+
+}
 function selectStoreColor(color){
 
 selectedStoreColor=color;
