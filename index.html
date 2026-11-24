@@ -8,7 +8,74 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+/* =================================
+   BIZORA DARK MODE
+================================= */
 
+.theme-toggle {
+  padding: 9px 14px;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 10px;
+  background: var(--surface, #ffffff);
+  color: var(--text, #1f2937);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+body.dark-mode {
+  background: #111827 !important;
+  color: #f3f4f6 !important;
+}
+
+body.dark-mode .sidebar,
+body.dark-mode .topbar,
+body.dark-mode .card,
+body.dark-mode .stat-card,
+body.dark-mode .modal-content,
+body.dark-mode .modal,
+body.dark-mode .plan-box {
+  background: #1f2937 !important;
+  color: #f3f4f6 !important;
+  border-color: #374151 !important;
+}
+
+body.dark-mode input,
+body.dark-mode select,
+body.dark-mode textarea {
+  background: #111827 !important;
+  color: #f9fafb !important;
+  border-color: #374151 !important;
+}
+
+body.dark-mode table,
+body.dark-mode th,
+body.dark-mode td,
+body.dark-mode label,
+body.dark-mode p,
+body.dark-mode h1,
+body.dark-mode h2,
+body.dark-mode h3,
+body.dark-mode .muted {
+  color: #f3f4f6;
+}
+
+body.dark-mode .theme-toggle {
+  background: #374151;
+  color: #ffffff;
+  border-color: #4b5563;
+}
+
+body.dark-mode .nav button {
+  color: #d1d5db;
+}
+
+body.dark-mode .nav button.active {
+  background: #263b60;
+  color: #ffffff;
+}
 <style>
 :root{
   --primary:#3569e8;
@@ -782,9 +849,14 @@ body.print-mode .toast{display:none!important}
     <h2 id="topTitle">Dashboard</h2>
   </div>
   <div class="top-actions">
-    <span class="small muted" id="topStoreName">Toko Saya</span>
-    <div class="avatar" id="userAvatar">B</div>
-  </div>
+  <span class="small muted" id="topStoreName">Toko Saya</span>
+
+  <button id="themeToggle" class="theme-toggle" type="button">
+    <span id="themeLabel">Mode Gelap</span>
+  </button>
+
+  <div class="avatar" id="userAvatar">B</div>
+</div>
 </header>
 
 <div class="content">
@@ -3489,7 +3561,49 @@ window.addEventListener("error", event => {
 window.addEventListener("unhandledrejection", event => {
   console.error("Bizora async error:", event.reason);
 });
+  
+// ==========================================
+// BIZORA DARK / LIGHT MODE
+// ==========================================
 
+function setBizoraTheme(theme) {
+  document.body.classList.toggle(
+    "dark-mode",
+    theme === "dark"
+  );
+
+  const label = document.getElementById("themeLabel");
+
+  if (label) {
+    label.textContent =
+      theme === "dark" ? "Mode Terang" : "Mode Gelap";
+  }
+
+  localStorage.setItem("bizora_theme", theme);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const savedTheme =
+    localStorage.getItem("bizora_theme") || "light";
+
+  setBizoraTheme(savedTheme);
+
+  const toggle = document.getElementById("themeToggle");
+
+  if (toggle) {
+    toggle.addEventListener("click", function () {
+      const isDark =
+        document.body.classList.contains("dark-mode");
+
+      setBizoraTheme(isDark ? "light" : "dark");
+    });
+  }
+});
+
+// ==========================================
+// END BIZORA THEME
+// ==========================================
+  
 </script>
 </body>
 </html>
