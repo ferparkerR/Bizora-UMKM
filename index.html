@@ -3979,21 +3979,33 @@ if (document.readyState === "loading") {
 
       addMessage(data.reply, "bot");
 
-    } catch (err) {
-      console.error("Bizora AI:", err);
-      addMessage(
-        "Maaf bro, AI belum bisa menjawab.\n" +
-        (err.message || "Silakan coba kembali."),
-        "bot"
-      );
-    } finally {
-      typing.remove();
-      busy = false;
-      input.disabled = false;
-      send.disabled = false;
-      input.focus();
-    }
+} catch (err) {
+  console.error("Bizora AI detail:", err);
+
+  let detail = err.message || "Kesalahan tidak diketahui.";
+
+  if (err.context instanceof Response) {
+    try {
+      const response = await err.context.clone().json();
+      detail =
+        response.details ||
+        response.error ||
+        detail;
+    } catch (_) {}
   }
+
+  addMessage(
+    "Bizora AI mengalami kendala:\n" + detail,
+    "bot"
+  );
+
+} finally {
+  typing.remove();
+  busy = false;
+  input.disabled = false;
+  send.disabled = false;
+  input.focus();
+}
 
   send.addEventListener("click", () => {
     sendMessage(input.value);
