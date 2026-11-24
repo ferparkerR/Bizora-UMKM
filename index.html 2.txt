@@ -3567,8 +3567,9 @@ async function bizoraRestoreBackup(file) {
 function initializeBackupButtons() {
   const downloadButton = $("backupDownloadBtn");
 
-  if (downloadButton && !downloadButton.dataset.bizoraBackupBound) {
-    downloadButton.dataset.bizoraBackupBound = "true";
+  if (downloadButton) {
+  downloadButton.onclick = bizoraDownloadBackup;
+}
 
     downloadButton.addEventListener("click", bizoraDownloadBackup);
   }
