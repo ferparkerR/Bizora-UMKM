@@ -1428,24 +1428,15 @@ updateBrandingPreview();
 
 }
 
+
 async function saveStoreSettings(){
 
-const storeName=
-document.getElementById("storeName").value.trim();
-
-const storeAddress=
-document.getElementById("storeAddress").value.trim();
-
-const storePhone=
-document.getElementById("storePhone").value.trim();
+const storeName=document.getElementById("storeName").value.trim();
+const storeAddress=document.getElementById("storeAddress").value.trim();
+const storePhone=document.getElementById("storePhone").value.trim();
 
 if(!storeName){
-
-return showMessage(
-"settingsMessage",
-"Nama toko tidak boleh kosong."
-);
-
+return showMessage("settingsMessage","Nama toko tidak boleh kosong.");
 }
 
 showMessage("settingsMessage","Menyimpan pengaturan...");
@@ -1455,81 +1446,71 @@ let logoUrl=storeProfile?.store_logo||null;
 if(uploadedLogoFile){
 
 const file=uploadedLogoFile;
-
-const extension=
-file.name.split(".").pop().toLowerCase();
-
-const filePath=
-currentUser.id+
-"/logo-"+Date.now()+"."+extension;
+const extension=file.name.split(".").pop().toLowerCase();
+const filePath=currentUser.id+"/logo-"+Date.now()+"."+extension;
 
 const {error:uploadError}=await sb.storage
-
 .from("store-logos")
-
 .upload(filePath,file,{
-
 cacheControl:"3600",
-
 upsert:true
-
 });
 
 if(uploadError){
-
-return showMessage(
-"settingsMessage",
-"Gagal upload logo: "+uploadError.message
-);
-
+return showMessage("settingsMessage","Gagal upload logo: "+uploadError.message);
 }
 
 const {data:urlData}=sb.storage
-
 .from("store-logos")
-
 .getPublicUrl(filePath);
 
 logoUrl=urlData.publicUrl;
-
 }
 
 const payload={
-
 owner_id:currentUser.id,
-
 store_name:storeName,
-
 store_logo:logoUrl,
-
 store_color:selectedStoreColor,
-
 store_address:storeAddress,
-
 store_phone:storePhone,
-
 updated_at:new Date().toISOString()
-
 };
 
 const {data,error}=await sb
-
 .from("store_profiles")
-
 .upsert(payload,{onConflict:"owner_id"})
-
 .select()
-
 .single();
 
 if(error){
+return showMessage("settingsMessage","Gagal menyimpan: "+error.message);
+}
 
-return showMessage(
-"settingsMessage",
-"Gagal menyimpan: "+error.message
-);
+// Perbarui data lokal
+storeProfile=data;
+currentBusiness.business_name=storeName;
+uploadedLogoFile=null;
+
+// Perbarui nama bisnis di database lama
+const {error:businessError}=await sb
+.from("businesses")
+.update({business_name:storeName})
+.eq("id",currentBusiness.id);
+
+if(businessError){
+console.error("Business update:",businessError.message);
+}
+
+// Terapkan branding langsung
+applyStoreBranding();
+renderLogoPreview(logoUrl);
+updateBrandingPreview();
+
+showMessage("settingsMessage","Pengaturan toko berhasil disimpan!");
 
 }
+
 
 storeProfile=data;
 
