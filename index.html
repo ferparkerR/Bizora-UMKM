@@ -484,17 +484,37 @@ if(error)return showMessage("authMessage",error.message);
 showMessage("authMessage","Pendaftaran berhasil. Jika konfirmasi email aktif, cek email kamu.");
 }
 
+
 async function login(){
-const email=document.getElementById("email").value.trim();
-const password=document.getElementById("password").value;
-if(!email||!password)return showMessage("authMessage","Email dan password harus diisi.");
+  try {
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
 
-showMessage("authMessage","Sedang masuk...");
-const {data,error}=await sb.auth.signInWithPassword({email,password});
-if(error)return showMessage("authMessage",error.message);
+    if(!email || !password){
+      return showMessage("authMessage","Email dan password harus diisi.");
+    }
 
-currentUser=data.user;
-await initializeApp();
+    showMessage("authMessage","Sedang masuk...");
+
+    const {data,error} = await sb.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if(error){
+      return showMessage("authMessage",error.message);
+    }
+
+    currentUser = data.user;
+
+    showMessage("authMessage","Login berhasil! Memuat Bizora...");
+
+    await initializeApp();
+
+  } catch(error) {
+    console.error(error);
+    showMessage("authMessage","Terjadi kesalahan: " + error.message);
+  }
 }
 
 async function logout(){
