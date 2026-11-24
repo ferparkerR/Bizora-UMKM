@@ -758,6 +758,138 @@ body.dark-mode .nav button.active {
   background: #dce9ff;
   transform: translateY(-1px);
 }
+  
+.bizora-backup {
+  display: grid;
+  gap: 20px;
+  color: var(--text, #172033);
+}
+
+.backup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.backup-header h2 {
+  margin: 0 0 6px;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.backup-header p,
+.backup-card p,
+.backup-warning p {
+  color: var(--muted, #8490a3);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.backup-status {
+  color: #159b72;
+  background: #e8f8f1;
+  padding: 8px 12px;
+  border-radius: 30px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.backup-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.backup-card {
+  background: var(--card, #fff);
+  border: 1px solid var(--border, #e7eaf0);
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.backup-icon {
+  width: 43px;
+  height: 43px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--soft, #f0f4ff);
+  color: var(--primary, #5268e8);
+  font-size: 23px;
+  font-weight: 800;
+  margin-bottom: 15px;
+}
+
+.backup-card h3 {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.backup-card button {
+  width: 100%;
+  margin-top: 12px;
+  padding: 12px 15px;
+  border: 0;
+  border-radius: 11px;
+  background: var(--primary, #5268e8);
+  color: white;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.backup-card button.secondary {
+  background: var(--soft, #f0f4ff);
+  color: var(--primary, #5268e8);
+}
+
+.backup-info-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--border, #e7eaf0);
+  font-size: 13px;
+}
+
+.backup-info-row:last-child {
+  border-bottom: 0;
+}
+
+.backup-info-row span {
+  color: var(--muted, #8490a3);
+}
+
+.backup-info-row strong {
+  text-align: right;
+}
+
+.backup-warning {
+  border: 1px solid #f0d9a6;
+  background: #fff9eb;
+  color: #91651b;
+  padding: 16px;
+  border-radius: 14px;
+  font-size: 13px;
+}
+
+.backup-warning p {
+  color: #91651b;
+  margin-bottom: 0;
+}
+
+@media(max-width:600px) {
+  .backup-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .backup-card {
+    padding: 17px;
+  }
+}
+
 </style>
 </head>
 
@@ -793,6 +925,60 @@ body.dark-mode .nav button.active {
     </div>
   </div>
 </div>
+  
+<section class="bizora-backup">
+  <div class="backup-header">
+    <div>
+      <h2>Data Protection</h2>
+      <p>Lindungi dan pulihkan seluruh data bisnis Anda.</p>
+    </div>
+    <span class="backup-status">● Data Protection</span>
+  </div>
+
+  <div class="backup-grid">
+    <div class="backup-card">
+      <div class="backup-icon">↓</div>
+      <h3>Manual Backup</h3>
+      <p>Unduh salinan data bisnis ke perangkat Anda.</p>
+      <button id="backupDownloadBtn">Download Backup</button>
+    </div>
+
+    <div class="backup-card">
+      <div class="backup-icon">↑</div>
+      <h3>Restore Data</h3>
+      <p>Pulihkan data bisnis dari file backup Bizora.</p>
+      <input id="backupRestoreFile" type="file"
+        accept=".json,application/json" hidden>
+      <button class="secondary" id="backupRestoreBtn">
+        Pilih File Backup
+      </button>
+    </div>
+  </div>
+
+  <div class="backup-card backup-history">
+    <h3>Backup Information</h3>
+    <div class="backup-info-row">
+      <span>Backup terakhir</span>
+      <strong id="backupLastDate">Belum tersedia</strong>
+    </div>
+    <div class="backup-info-row">
+      <span>Versi backup</span>
+      <strong>Bizora Backup v1</strong>
+    </div>
+    <div class="backup-info-row">
+      <span>Metode</span>
+      <strong>Manual Download</strong>
+    </div>
+  </div>
+
+  <div class="backup-warning">
+    <strong>Perlindungan Data</strong>
+    <p>
+      Restore dapat mengganti data bisnis yang sedang tersimpan.
+      Pastikan Anda mengunduh backup terbaru sebelum melakukan pemulihan.
+    </p>
+  </div>
+</section>
 
 <div class="mobile-overlay" id="mobileOverlay" onclick="toggleSidebar()"></div>
 
@@ -3698,6 +3884,186 @@ async function deleteProduct(productId) {
     alert("Gagal menghapus produk: " + error.message);
   }
 }
+  
+/* =========================================
+   BIZORA DATA PROTECTION
+   Manual Backup & Restore
+========================================= */
+
+const BIZORA_BACKUP_VERSION = 1;
+
+const BIZORA_BACKUP_TABLES = [
+  "products",
+  "transactions",
+  "expenses",
+  "promos",
+  "receipt_settings"
+];
+
+async function bizoraGetBackupUser() {
+  const { data, error } = await sb.auth.getUser();
+
+  if (error) throw error;
+  if (!data.user) throw new Error("Silakan login terlebih dahulu.");
+
+  return data.user;
+}
+
+async function bizoraDownloadBackup() {
+  const button = document.getElementById("backupDownloadBtn");
+
+  try {
+    if (button) {
+      button.disabled = true;
+      button.textContent = "Membuat Backup...";
+    }
+
+    const user = await bizoraGetBackupUser();
+
+    const backupData = {
+      app: "Bizora",
+      version: BIZORA_BACKUP_VERSION,
+      created_at: new Date().toISOString(),
+      user_id: user.id,
+      tables: {}
+    };
+
+    for (const table of BIZORA_BACKUP_TABLES) {
+      const { data, error } = await sb
+        .from(table)
+        .select("*");
+
+      if (error) {
+        throw new Error(
+          "Gagal mengambil data " + table + ": " + error.message
+        );
+      }
+
+      backupData.tables[table] = data || [];
+    }
+
+    const file = new Blob(
+      [JSON.stringify(backupData, null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download =
+      "bizora-backup-" +
+      new Date().toISOString().slice(0, 10) +
+      ".json";
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    const date = new Date().toLocaleString("id-ID");
+
+    localStorage.setItem("bizora_last_backup", date);
+
+    const lastDate = document.getElementById("backupLastDate");
+    if (lastDate) lastDate.textContent = date;
+
+    if (typeof showToast === "function") {
+      showToast("Backup berhasil dibuat.");
+    } else {
+      alert("Backup berhasil dibuat.");
+    }
+
+  } catch (error) {
+    console.error("Bizora backup error:", error);
+    alert("Backup gagal: " + error.message);
+
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Download Backup";
+    }
+  }
+}
+
+async function bizoraRestoreBackup(file) {
+  if (!file) return;
+
+  try {
+    const user = await bizoraGetBackupUser();
+
+    const raw = await file.text();
+    const backup = JSON.parse(raw);
+
+    if (
+      backup.app !== "Bizora" ||
+      backup.version !== BIZORA_BACKUP_VERSION ||
+      !backup.tables ||
+      backup.user_id !== user.id
+    ) {
+      throw new Error(
+        "File backup tidak valid atau bukan milik akun ini."
+      );
+    }
+
+    for (const table of BIZORA_BACKUP_TABLES) {
+      if (!Array.isArray(backup.tables[table])) {
+        throw new Error("Data tabel " + table + " tidak valid.");
+      }
+    }
+
+    const confirmed = confirm(
+      "PERINGATAN RESTORE\n\n" +
+      "Data akan dipulihkan dari file backup.\n" +
+      "Proses ini dapat mengubah data yang sedang tersimpan.\n\n" +
+      "Sebaiknya download backup terbaru terlebih dahulu.\n\n" +
+      "Lanjutkan?"
+    );
+
+    if (!confirmed) return;
+
+    alert(
+      "Validasi backup berhasil. Restore penuh belum diaktifkan. " +
+      "Kita perlu menyesuaikan relasi tabel, primary key, dan " +
+      "aturan keamanan database Bizora sebelum mengubah data."
+    );
+
+  } catch (error) {
+    console.error("Bizora restore validation error:", error);
+    alert("Restore gagal: " + error.message);
+  }
+}
+
+document.getElementById("backupDownloadBtn")
+  ?.addEventListener("click", bizoraDownloadBackup);
+
+document.getElementById("backupRestoreBtn")
+  ?.addEventListener("click", () => {
+    document.getElementById("backupRestoreFile")?.click();
+  });
+
+document.getElementById("backupRestoreFile")
+  ?.addEventListener("change", async event => {
+    const file = event.target.files?.[0];
+
+    if (file) {
+      await bizoraRestoreBackup(file);
+    }
+
+    event.target.value = "";
+  });
+
+document.addEventListener("DOMContentLoaded", () => {
+  const lastDate = document.getElementById("backupLastDate");
+
+  if (lastDate) {
+    lastDate.textContent =
+      localStorage.getItem("bizora_last_backup") ||
+      "Belum tersedia";
+  }
+});
+
 </script>
 </body>
 </html>
