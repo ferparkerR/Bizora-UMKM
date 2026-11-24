@@ -3453,82 +3453,117 @@ async function bizoraDownloadBackup() {
 }
 
 
+
 async function bizoraRestoreBackup(file) {
   if (!file) return;
 
   try {
     const user = await bizoraGetBackupUser();
 
-    const raw = await file.text();
-    const backup = JSON.parse(raw);
+    // 1. VALIDASI FORMAT FILE
+    if (!file.name.toLowerCase().endsWith(".json")) {
+      throw new Error("File harus berformat JSON.");
+    }
 
-    if (
-      backup.app !== "Bizora" ||
-      backup.version !== BIZORA_BACKUP_VERSION ||
-      !backup.tables ||
-      backup.user_id !== user.id
-    ) {
+    const raw = await file.text();
+
+    if (!raw.trim()) {
+      throw new Error("File backup kosong.");
+    }
+
+    let backup;
+
+    try {
+      backup = JSON.parse(raw);
+    } catch {
+      throw new Error("File backup rusak atau format JSON tidak valid.");
+    }
+
+    // 2. VALIDASI IDENTITAS DAN VERSI
+    if (backup.app !== "Bizora") {
+      throw new Error("File ini bukan backup Bizora.");
+    }
+
+    if (backup.version !== BIZORA_BACKUP_VERSION) {
+      throw new Error("Versi backup tidak kompatibel.");
+    }
+
+    if (backup.user_id !== user.id) {
+      throw new Error("Backup bukan milik akun Bizora ini.");
+    }
+
+    if (!backup.tables || typeof backup.tables !== "object") {
+      throw new Error("Struktur data backup tidak valid.");
+    }
+
+    // 3. VALIDASI SELURUH TABEL WAJIB
+    const missingTables = [];
+    const invalidTables = [];
+    const summary = {};
+    let totalRecords = 0;
+
+    for (const table of BIZORA_BACKUP_TABLES) {
+      if (!(table in backup.tables)) {
+        missingTables.push(table);
+        continue;
+      }
+
+      if (!Array.isArray(backup.tables[table])) {
+        invalidTables.push(table);
+        continue;
+      }
+
+      summary[table] = backup.tables[table].length;
+      totalRecords += backup.tables[table].length;
+    }
+
+    if (missingTables.length) {
       throw new Error(
-        "File backup tidak valid atau bukan milik akun ini."
+        "Tabel tidak ditemukan dalam backup: " +
+        missingTables.join(", ")
       );
     }
 
-    for (const table of BIZORA_BACKUP_TABLES) {
-      if (!Array.isArray(backup.tables[table])) {
-        throw new Error("Data tabel " + table + " tidak valid.");
-      }
+    if (invalidTables.length) {
+      throw new Error(
+        "Format data tabel tidak valid: " +
+        invalidTables.join(", ")
+      );
     }
 
+    // 4. TAMPILKAN HASIL PEMERIKSAAN
+    const summaryText = Object.entries(summary)
+      .map(([table, count]) => table + ": " + count + " data")
+      .join("\n");
+
     const confirmed = confirm(
-      "PERINGATAN RESTORE\n\n" +
-      "Data akan dipulihkan dari file backup.\n" +
-      "Proses ini dapat mengubah data yang sedang tersimpan.\n\n" +
-      "Sebaiknya download backup terbaru terlebih dahulu.\n\n" +
-      "Lanjutkan?"
+      "BACKUP BIZORA TERVERIFIKASI\n\n" +
+      "Nama file: " + file.name +
+      "\nVersi: " + backup.version +
+      "\nDibuat: " + new Date(backup.created_at).toLocaleString("id-ID") +
+      "\n\n" + summaryText +
+      "\n\nTotal data: " + totalRecords +
+      "\n\nFile lolos pemeriksaan keamanan.\n" +
+      "Belum ada data database yang diubah.\n\n" +
+      "Lanjutkan ke tahap berikutnya?"
     );
 
     if (!confirmed) return;
 
+    // 5. RESTORE BELUM MENGUBAH DATABASE
     alert(
-      "Validasi backup berhasil. Restore penuh belum diaktifkan. " +
-      "Kita perlu menyesuaikan relasi tabel, primary key, dan " +
-      "aturan keamanan database Bizora sebelum mengubah data."
+      "Pemeriksaan Backup Berhasil!\n\n" +
+      "File aman secara struktur dan identitas akun.\n" +
+      "Data database belum diubah.\n\n" +
+      "Tahap pemulihan penuh akan diaktifkan " +
+      "setelah mekanisme relasi dan keamanan database disiapkan."
     );
 
   } catch (error) {
-    console.error("Bizora restore validation error:", error);
-    alert("Restore gagal: " + error.message);
+    console.error("Bizora Backup Protection:", error);
+    alert("Backup Protection gagal: " + error.message);
   }
 }
-
-document.getElementById("backupDownloadBtn")
-  ?.addEventListener("click", bizoraDownloadBackup);
-
-document.getElementById("backupRestoreBtn")
-  ?.addEventListener("click", () => {
-    document.getElementById("backupRestoreFile")?.click();
-  });
-
-document.getElementById("backupRestoreFile")
-  ?.addEventListener("change", async event => {
-    const file = event.target.files?.[0];
-
-    if (file) {
-      await bizoraRestoreBackup(file);
-    }
-
-    event.target.value = "";
-  });
-
-document.addEventListener("DOMContentLoaded", () => {
-  const lastDate = document.getElementById("backupLastDate");
-
-  if (lastDate) {
-    lastDate.textContent =
-      localStorage.getItem("bizora_last_backup") ||
-      "Belum tersedia";
-  }
-});
 
 </script>
 </body>
