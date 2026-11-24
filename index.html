@@ -905,7 +905,7 @@ body.dark-mode .backup-warning p{color:#f5d58c}
 <div class="toast" id="toast"></div>
 
 <script>
-  // ==========================================
+// ==========================================
 // BIZORA CONFIGURATION
 // ==========================================
 const SUPABASE_URL = "https://rhvicwfqjzseqhtrpzmw.supabase.co";
@@ -930,13 +930,13 @@ let productCategories = [];
 let isRegister = false;
 let receiptSettings = {};
 let isInitializing = false;
-
 let featuredProducts = [];
 let promos = [];
 
 try {
   featuredProducts = JSON.parse(localStorage.getItem("bizora_featured") || "[]");
   promos = JSON.parse(localStorage.getItem("bizora_promos") || "[]");
+
   if (!Array.isArray(featuredProducts)) featuredProducts = [];
   if (!Array.isArray(promos)) promos = [];
 } catch (error) {
@@ -1003,33 +1003,44 @@ function formatDate(value) {
 function todayString() {
   const d = new Date();
 
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, "0"),
+    String(d.getDate()).padStart(2, "0")
+  ].join("-");
 }
 
 function safeLocalStorageSet(key, value) {
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    return true;
   } catch (error) {
-    console.warn("Tidak dapat menyimpan data lokal:", error);
+    console.warn("Local storage error:", error);
     showToast("Penyimpanan perangkat penuh atau tidak tersedia.");
+    return false;
   }
+}
+
+function safeText(id, value) {
+  const el = $(id);
+  if (el) el.textContent = value;
 }
 
 // ==========================================
 // NAVIGATION
 // ==========================================
 const pageTitles = {
-  dashboard:"Dashboard",
-  products:"Produk",
-  pos:"Kasir / POS",
-  transactions:"Transaksi",
-  expenses:"Pengeluaran",
-  bestseller:"Best Seller",
-  promos:"Promo Center",
-  assistant:"Bizora Assistant",
-  employees:"Akun Karyawan",
-  receipt:"Pengaturan Struk",
-  settings:"Profil Toko"
+  dashboard: "Dashboard",
+  products: "Produk",
+  pos: "Kasir / POS",
+  transactions: "Transaksi",
+  expenses: "Pengeluaran",
+  bestseller: "Best Seller",
+  promos: "Promo Center",
+  assistant: "Bizora Assistant",
+  employees: "Akun Karyawan",
+  receipt: "Pengaturan Struk",
+  settings: "Profil Toko"
 };
 
 function showPage(page) {
@@ -1043,7 +1054,7 @@ function showPage(page) {
     el.classList.toggle("active", el.dataset.page === page);
   });
 
-  $("topTitle").textContent = pageTitles[page] || "Bizora";
+  safeText("topTitle", pageTitles[page] || "Bizora");
 
   if (page === "products") renderProducts();
   if (page === "pos") renderPOSProducts();
@@ -1053,13 +1064,13 @@ function showPage(page) {
   if (page === "promos") renderPromos();
   if (page === "receipt") renderReceiptPreview();
 
-  $("sidebar").classList.remove("open");
-  $("mobileOverlay").classList.remove("show");
+  $("sidebar")?.classList.remove("open");
+  $("mobileOverlay")?.classList.remove("show");
 }
 
 function toggleSidebar() {
-  $("sidebar").classList.toggle("open");
-  $("mobileOverlay").classList.toggle("show");
+  $("sidebar")?.classList.toggle("open");
+  $("mobileOverlay")?.classList.toggle("show");
 }
 
 // ==========================================
@@ -1068,47 +1079,61 @@ function toggleSidebar() {
 function toggleAuthMode() {
   isRegister = !isRegister;
 
-  $("authTitle").textContent = isRegister
-    ? "Buat akun Bizora"
-    : "Selamat datang kembali";
+  safeText(
+    "authTitle",
+    isRegister ? "Buat akun Bizora" : "Selamat datang kembali"
+  );
 
-  $("authDescription").textContent = isRegister
-    ? "Daftar dan mulai kelola bisnismu."
-    : "Masuk untuk mengelola bisnis lebih mudah.";
+  safeText(
+    "authDescription",
+    isRegister
+      ? "Daftar dan mulai kelola bisnismu."
+      : "Masuk untuk mengelola bisnis lebih mudah."
+  );
 
-  $("authSubmit").textContent = isRegister
-    ? "Buat Akun"
-    : "Masuk ke Bizora";
+  safeText("authSubmit", isRegister ? "Buat Akun" : "Masuk ke Bizora");
 
-  $("authSwitchText").textContent = isRegister
-    ? "Sudah punya akun?"
-    : "Belum punya akun?";
+  safeText(
+    "authSwitchText",
+    isRegister ? "Sudah punya akun?" : "Belum punya akun?"
+  );
 
-  $("authSwitchButton").textContent = isRegister
-    ? "Masuk"
-    : "Buat akun";
+  safeText("authSwitchButton", isRegister ? "Masuk" : "Buat akun");
 
-  $("confirmPasswordField").classList.toggle("hidden", !isRegister);
-  $("authConfirmPassword").required = isRegister;
+  if ($("confirmPasswordField")) {
+    $("confirmPasswordField").classList.toggle("hidden", !isRegister);
+  }
 
-  $("authPassword").autocomplete = isRegister
-    ? "new-password"
-    : "current-password";
+  if ($("authConfirmPassword")) {
+    $("authConfirmPassword").required = isRegister;
+  }
+
+  if ($("authPassword")) {
+    $("authPassword").autocomplete = isRegister
+      ? "new-password"
+      : "current-password";
+  }
 }
 
-$("authForm").addEventListener("submit", async e => {
+$("authForm")?.addEventListener("submit", async e => {
   e.preventDefault();
 
-  const email = $("authEmail").value.trim();
-  const password = $("authPassword").value;
+  const email = $("authEmail")?.value.trim();
+  const password = $("authPassword")?.value;
 
-  if (isRegister && password !== $("authConfirmPassword").value) {
+  if (!email || !password) {
+    return showToast("Email dan password wajib diisi.");
+  }
+
+  if (isRegister && password !== $("authConfirmPassword")?.value) {
     return showToast("Konfirmasi password tidak sama.");
   }
 
   const button = $("authSubmit");
-  button.disabled = true;
-  button.textContent = "Memproses...";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Memproses...";
+  }
 
   try {
     if (isRegister) {
@@ -1137,11 +1162,13 @@ $("authForm").addEventListener("submit", async e => {
       await initializeApp();
     }
   } catch (err) {
-    console.error(err);
+    console.error("Auth error:", err);
     showToast(err.message || "Tidak dapat memproses akun.");
   } finally {
-    button.disabled = false;
-    button.textContent = isRegister ? "Buat Akun" : "Masuk ke Bizora";
+    if (button) {
+      button.disabled = false;
+      button.textContent = isRegister ? "Buat Akun" : "Masuk ke Bizora";
+    }
   }
 });
 
@@ -1149,8 +1176,11 @@ async function logout() {
   if (!confirm("Yakin ingin keluar dari Bizora?")) return;
 
   try {
-    await sb.auth.signOut();
+    const { error } = await sb.auth.signOut();
+    if (error) throw error;
+
     user = null;
+    business = null;
     location.reload();
   } catch (err) {
     showToast("Gagal keluar: " + err.message);
@@ -1166,8 +1196,8 @@ async function initializeApp() {
   isInitializing = true;
 
   try {
-    $("authScreen").classList.add("hidden");
-    $("appShell").classList.add("hidden");
+    $("authScreen")?.classList.add("hidden");
+    $("appShell")?.classList.add("hidden");
 
     const { data: businessData, error: businessError } = await sb
       .from("businesses")
@@ -1202,7 +1232,6 @@ async function initializeApp() {
         .single();
 
       if (error) throw error;
-
       business = data;
     }
 
@@ -1216,22 +1245,24 @@ async function initializeApp() {
     await loadCategories();
     await loadStoreSettings();
 
-    $("appShell").classList.remove("hidden");
+    $("appShell")?.classList.remove("hidden");
 
     const storeName =
       storeProfile.store_name ||
       business.business_name ||
       "Toko Saya";
 
-    $("topStoreName").textContent = storeName;
-    $("userAvatar").textContent = storeName.charAt(0).toUpperCase();
+    safeText("topStoreName", storeName);
+    safeText("userAvatar", storeName.charAt(0).toUpperCase());
 
     renderAll();
     showPage("dashboard");
 
   } catch (err) {
     console.error("Initialization error:", err);
-    $("authScreen").classList.remove("hidden");
+
+    $("authScreen")?.classList.remove("hidden");
+
     showToast("Gagal memuat Bizora: " + err.message);
   } finally {
     isInitializing = false;
@@ -1250,26 +1281,26 @@ sb.auth.onAuthStateChange((event, session) => {
   if (!session && event === "SIGNED_OUT") {
     user = null;
     business = null;
-    $("authScreen").classList.remove("hidden");
-    $("appShell").classList.add("hidden");
+
+    $("authScreen")?.classList.remove("hidden");
+    $("appShell")?.classList.add("hidden");
   }
 });
 
 (async function checkSession() {
   try {
     const { data, error } = await sb.auth.getSession();
-
     if (error) throw error;
 
     if (data.session?.user) {
       user = data.session.user;
       await initializeApp();
     } else {
-      $("authScreen").classList.remove("hidden");
+      $("authScreen")?.classList.remove("hidden");
     }
   } catch (err) {
     console.error(err);
-    $("authScreen").classList.remove("hidden");
+    $("authScreen")?.classList.remove("hidden");
     showToast("Gagal memeriksa sesi login.");
   }
 })();
@@ -1288,21 +1319,24 @@ async function loadStoreProfile() {
 
   storeProfile = data || {};
 
-  $("storeName").value =
-    storeProfile.store_name ||
-    business.business_name ||
-    "";
+  if ($("storeName")) {
+    $("storeName").value =
+      storeProfile.store_name || business.business_name || "";
+  }
 
-  $("storeAddress").value = storeProfile.store_address || "";
-  $("storePhone").value = storeProfile.store_phone || "";
+  if ($("storeAddress")) {
+    $("storeAddress").value = storeProfile.store_address || "";
+  }
 
-  if (storeProfile.store_logo) {
-    $("storeLogoPreview").innerHTML = `
-      <img src="${escapeHTML(storeProfile.store_logo)}"
-        style="max-width:110px;max-height:85px;object-fit:contain;border-radius:10px">
-    `;
-  } else {
-    $("storeLogoPreview").textContent = "Belum ada logo toko.";
+  if ($("storePhone")) {
+    $("storePhone").value = storeProfile.store_phone || "";
+  }
+
+  if ($("storeLogoPreview")) {
+    $("storeLogoPreview").innerHTML = storeProfile.store_logo
+      ? `<img src="${escapeHTML(storeProfile.store_logo)}"
+          style="max-width:110px;max-height:85px;object-fit:contain;border-radius:10px">`
+      : "Belum ada logo toko.";
   }
 }
 
@@ -1337,27 +1371,17 @@ async function uploadImage(bucket, file) {
 
   if (error) throw error;
 
-  const { data } = sb.storage
-    .from(bucket)
-    .getPublicUrl(path);
-
+  const { data } = sb.storage.from(bucket).getPublicUrl(path);
   return data.publicUrl;
 }
 
-$("storeLogo").addEventListener("change", e => {
+$("storeLogo")?.addEventListener("change", e => {
   storeLogoFile = e.target.files?.[0] || null;
-
   if (!storeLogoFile) return;
 
-  if (!storeLogoFile.type.startsWith("image/")) {
-    showToast("File harus berupa gambar.");
-    e.target.value = "";
-    storeLogoFile = null;
-    return;
-  }
-
-  if (storeLogoFile.size > 5 * 1024 * 1024) {
-    showToast("Ukuran gambar maksimal 5 MB.");
+  if (!storeLogoFile.type.startsWith("image/") ||
+      storeLogoFile.size > 5 * 1024 * 1024) {
+    showToast("Pilih gambar dengan ukuran maksimal 5 MB.");
     e.target.value = "";
     storeLogoFile = null;
     return;
@@ -1366,21 +1390,26 @@ $("storeLogo").addEventListener("change", e => {
   const reader = new FileReader();
 
   reader.onload = () => {
-    $("storeLogoPreview").innerHTML = `
-      <img src="${reader.result}"
-        style="max-width:110px;max-height:85px;object-fit:contain;border-radius:10px">
-    `;
+    if ($("storeLogoPreview")) {
+      $("storeLogoPreview").innerHTML = `
+        <img src="${reader.result}"
+          style="max-width:110px;max-height:85px;object-fit:contain;border-radius:10px">
+      `;
+    }
   };
 
   reader.readAsDataURL(storeLogoFile);
 });
 
-$("storeForm").addEventListener("submit", async e => {
+$("storeForm")?.addEventListener("submit", async e => {
   e.preventDefault();
 
   const button = $("storeForm").querySelector('button[type="submit"]');
-  button.disabled = true;
-  button.textContent = "Menyimpan...";
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Menyimpan...";
+  }
 
   try {
     let logo = storeProfile.store_logo || null;
@@ -1408,14 +1437,19 @@ $("storeForm").addEventListener("submit", async e => {
 
     storeProfile = data;
     storeLogoFile = null;
-    $("storeLogo").value = "";
 
-    $("topStoreName").textContent =
-      storeProfile.store_name || business.business_name;
+    if ($("storeLogo")) $("storeLogo").value = "";
 
-    $("userAvatar").textContent =
+    safeText(
+      "topStoreName",
+      storeProfile.store_name || business.business_name
+    );
+
+    safeText(
+      "userAvatar",
       (storeProfile.store_name || business.business_name || "B")
-        .charAt(0).toUpperCase();
+        .charAt(0).toUpperCase()
+    );
 
     renderReceiptPreview();
     showToast("Profil toko berhasil disimpan.");
@@ -1424,8 +1458,10 @@ $("storeForm").addEventListener("submit", async e => {
     console.error(err);
     showToast("Gagal menyimpan profil: " + err.message);
   } finally {
-    button.disabled = false;
-    button.textContent = "Simpan Profil Toko";
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Simpan Profil Toko";
+    }
   }
 });
 
@@ -1498,9 +1534,7 @@ function renderCategoryOptions(selected = "") {
       `<option value="all">Semua kategori</option>${options}`;
 
     filterSelect.value =
-      old === "all" || productCategories.includes(old)
-        ? old
-        : "all";
+      old === "all" || productCategories.includes(old) ? old : "all";
   }
 
   if (posSelect) {
@@ -1510,9 +1544,7 @@ function renderCategoryOptions(selected = "") {
       `<option value="all">Semua kategori</option>${options}`;
 
     posSelect.value =
-      old === "all" || productCategories.includes(old)
-        ? old
-        : "all";
+      old === "all" || productCategories.includes(old) ? old : "all";
   }
 
   renderCategoryList();
@@ -1520,7 +1552,9 @@ function renderCategoryOptions(selected = "") {
 
 function openCategoryModal() {
   renderCategoryOptions();
-  $("newCategoryName").value = "";
+
+  if ($("newCategoryName")) $("newCategoryName").value = "";
+
   openModal("categoryModal");
 }
 
@@ -1572,18 +1606,18 @@ function renderCategoryList() {
   });
 }
 
-$("categoryForm").addEventListener("submit", async e => {
+$("categoryForm")?.addEventListener("submit", async e => {
   e.preventDefault();
 
   const name = $("newCategoryName").value.trim();
 
-  if (!name) {
-    return showToast("Nama kategori wajib diisi.");
+  if (!name) return showToast("Nama kategori wajib diisi.");
+
+  if (name.length > 40) {
+    return showToast("Nama kategori maksimal 40 karakter.");
   }
 
-  if (productCategories.some(
-    x => x.toLowerCase() === name.toLowerCase()
-  )) {
+  if (productCategories.some(x => x.toLowerCase() === name.toLowerCase())) {
     return showToast("Kategori sudah tersedia.");
   }
 
@@ -1617,12 +1651,8 @@ async function renameCategory(index) {
 
   const name = nextName.trim();
 
-  if (!name) {
-    return showToast("Nama kategori tidak boleh kosong.");
-  }
-
-  if (name.length > 40) {
-    return showToast("Nama kategori maksimal 40 karakter.");
+  if (!name || name.length > 40) {
+    return showToast("Nama kategori harus 1–40 karakter.");
   }
 
   if (productCategories.some(
@@ -1652,7 +1682,6 @@ async function renameCategory(index) {
     renderPOSProducts();
 
     showToast("Kategori berhasil diubah.");
-
   } catch (err) {
     productCategories = previous;
     renderCategoryOptions();
@@ -1686,7 +1715,6 @@ async function deleteCategory(index) {
     renderPOSProducts();
 
     showToast("Kategori berhasil dihapus.");
-
   } catch (err) {
     productCategories = previous;
     renderCategoryOptions();
@@ -1695,7 +1723,7 @@ async function deleteCategory(index) {
   }
 }
 
-// ==========================================
+  // ==========================================
 // PRODUCTS
 // ==========================================
 async function loadProducts() {
@@ -1720,24 +1748,24 @@ function setFeatured(id, enabled) {
 
   featuredProducts = featuredProducts.filter(x => x !== id);
 
-  if (enabled) {
-    featuredProducts.push(id);
-  }
+  if (enabled) featuredProducts.push(id);
 
   safeLocalStorageSet("bizora_featured", featuredProducts);
 }
 
 function openProductModal(id = null) {
-  $("productForm").reset();
-  $("productId").value = "";
-  $("productImage").value = "";
+  $("productForm")?.reset();
+
+  if ($("productId")) $("productId").value = "";
+  if ($("productImage")) $("productImage").value = "";
 
   productImageFile = null;
 
-  $("productImagePreview").textContent = "Belum ada foto dipilih.";
-  $("productModalTitle").textContent = id
-    ? "Edit Produk"
-    : "Tambah Produk";
+  if ($("productImagePreview")) {
+    $("productImagePreview").textContent = "Belum ada foto dipilih.";
+  }
+
+  safeText("productModalTitle", id ? "Edit Produk" : "Tambah Produk");
 
   renderCategoryOptions();
 
@@ -1753,31 +1781,26 @@ function openProductModal(id = null) {
     $("productStock").value = p.stock ?? 0;
     $("productFeatured").checked = isFeatured(p.id);
 
-    if (p.image_url) {
-      $("productImagePreview").innerHTML = `
-        <img src="${escapeHTML(p.image_url)}"
-          style="max-width:120px;max-height:100px;object-fit:contain;border-radius:10px">
-        <div class="small muted">Foto produk saat ini</div>
-      `;
+    if ($("productImagePreview")) {
+      $("productImagePreview").innerHTML = p.image_url
+        ? `<img src="${escapeHTML(p.image_url)}"
+            style="max-width:120px;max-height:100px;object-fit:contain;border-radius:10px">
+           <div class="small muted">Foto produk saat ini</div>`
+        : "Belum ada foto dipilih.";
     }
   }
 
   openModal("productModal");
 }
 
-$("productImage").addEventListener("change", e => {
+$("productImage")?.addEventListener("change", e => {
   const file = e.target.files?.[0];
   if (!file) return;
 
-  if (!file.type.startsWith("image/")) {
-    showToast("File harus berupa gambar.");
+  if (!file.type.startsWith("image/") || file.size > 5 * 1024 * 1024) {
+    showToast("Pilih gambar dengan ukuran maksimal 5 MB.");
     e.target.value = "";
-    return;
-  }
-
-  if (file.size > 5 * 1024 * 1024) {
-    showToast("Ukuran foto maksimal 5 MB.");
-    e.target.value = "";
+    productImageFile = null;
     return;
   }
 
@@ -1786,26 +1809,30 @@ $("productImage").addEventListener("change", e => {
   const reader = new FileReader();
 
   reader.onload = () => {
-    $("productImagePreview").innerHTML = `
-      <img src="${reader.result}"
-        style="max-width:120px;max-height:100px;object-fit:contain;border-radius:10px">
-      <div class="small muted">Pratinjau foto produk</div>
-    `;
+    if ($("productImagePreview")) {
+      $("productImagePreview").innerHTML = `
+        <img src="${reader.result}"
+          style="max-width:120px;max-height:100px;object-fit:contain;border-radius:10px">
+        <div class="small muted">Pratinjau foto produk</div>
+      `;
+    }
   };
 
   reader.readAsDataURL(file);
 });
 
-$("productForm").addEventListener("submit", async e => {
+$("productForm")?.addEventListener("submit", async e => {
   e.preventDefault();
 
   const button = $("productForm").querySelector('button[type="submit"]');
-  button.disabled = true;
-  button.textContent = "Menyimpan...";
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Menyimpan...";
+  }
 
   try {
     const id = $("productId").value;
-
     const name = $("productName").value.trim();
     const category = $("productCategory").value;
     const barcode = $("productBarcode").value.trim();
@@ -1824,10 +1851,7 @@ $("productForm").addEventListener("submit", async e => {
       throw new Error("Stok produk tidak valid.");
     }
 
-    const oldProduct = products.find(
-      p => String(p.id) === String(id)
-    );
-
+    const oldProduct = products.find(p => String(p.id) === String(id));
     let imageUrl = oldProduct?.image_url || null;
 
     if (productImageFile) {
@@ -1857,7 +1881,6 @@ $("productForm").addEventListener("submit", async e => {
 
       if (error) throw error;
       saved = data;
-
     } else {
       const { data, error } = await sb
         .from("products")
@@ -1878,26 +1901,30 @@ $("productForm").addEventListener("submit", async e => {
 
     renderAll();
 
-    showToast(
-      id
-        ? "Produk berhasil diperbarui."
-        : "Produk berhasil ditambahkan."
+    showToast(id
+      ? "Produk berhasil diperbarui."
+      : "Produk berhasil ditambahkan."
     );
 
   } catch (err) {
     console.error(err);
     showToast("Gagal menyimpan produk: " + err.message);
   } finally {
-    button.disabled = false;
-    button.textContent = "Simpan Produk";
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Simpan Produk";
+    }
   }
 });
 
+// HANYA SATU FUNGSI DELETE PRODUCT
 async function deleteProduct(id) {
   const product = products.find(p => String(p.id) === String(id));
-  if (!product) return;
+  if (!product) return showToast("Produk tidak ditemukan.");
 
-  if (!confirm(`Hapus produk "${product.name}"?`)) return;
+  if (!confirm(
+    `Yakin ingin menghapus produk "${product.name}"?\n\nProduk yang dihapus tidak bisa dikembalikan.`
+  )) return;
 
   try {
     const { error } = await sb
@@ -1908,14 +1935,16 @@ async function deleteProduct(id) {
 
     if (error) throw error;
 
+    products = products.filter(p => String(p.id) !== String(id));
     setFeatured(id, false);
 
-    await loadProducts();
+    cart = cart.filter(item => String(item.id) !== String(id));
+
     renderAll();
 
     showToast("Produk berhasil dihapus.");
-
   } catch (err) {
+    console.error(err);
     showToast("Gagal menghapus produk: " + err.message);
   }
 }
@@ -1929,18 +1958,13 @@ function renderProducts() {
   const categoryFilter = $("productCategoryFilter")?.value || "all";
 
   const filtered = products.filter(p => {
-    const productName = String(p.name || "").toLowerCase();
-    const productCode = String(p.barcode || p.sku || "").toLowerCase();
-
-    const matchesSearch =
-      productName.includes(search) ||
-      productCode.includes(search);
-
-    const matchesCategory =
-      categoryFilter === "all" ||
-      p.category === categoryFilter;
-
+    const name = String(p.name || "").toLowerCase();
+    const code = String(p.barcode || p.sku || "").toLowerCase();
     const stock = Number(p.stock) || 0;
+
+    const matchesSearch = name.includes(search) || code.includes(search);
+    const matchesCategory =
+      categoryFilter === "all" || p.category === categoryFilter;
 
     const matchesStock =
       stockFilter === "all" ||
@@ -1976,7 +2000,9 @@ function renderProducts() {
           </div>
           <div>
             <div class="product-name">${escapeHTML(p.name)}</div>
-            <div class="small muted">${escapeHTML(p.barcode || p.sku || "Tanpa barcode")}</div>
+            <div class="small muted">
+              ${escapeHTML(p.barcode || p.sku || "Tanpa barcode")}
+            </div>
           </div>
         </div>
       </td>
@@ -1998,8 +2024,10 @@ function renderProducts() {
         </button>
       </td>
       <td>
-        <button class="btn btn-light btn-sm" onclick="openProductModal('${String(p.id)}')">Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteProduct('${String(p.id)}')">Hapus</button>
+        <button class="btn btn-light btn-sm"
+          onclick="openProductModal('${String(p.id)}')">Edit</button>
+        <button class="btn btn-danger btn-sm"
+          onclick="deleteProduct('${String(p.id)}')">Hapus</button>
       </td>
     </tr>
   `).join("");
@@ -2025,14 +2053,15 @@ function renderPOSProducts() {
   const search = ($("posSearch")?.value || "").toLowerCase();
   const category = $("posCategory")?.value || "all";
 
-  const filtered = products
-    .filter(p => {
-      const name = String(p.name || "").toLowerCase();
-      const barcode = String(p.barcode || p.sku || "").toLowerCase();
+  const filtered = products.filter(p => {
+    const name = String(p.name || "").toLowerCase();
+    const barcode = String(p.barcode || p.sku || "").toLowerCase();
 
-      return name.includes(search) || barcode.includes(search);
-    })
-    .filter(p => category === "all" || p.category === category);
+    return (
+      (name.includes(search) || barcode.includes(search)) &&
+      (category === "all" || p.category === category)
+    );
+  });
 
   container.innerHTML = filtered.length
     ? filtered.map(p => `
@@ -2104,8 +2133,8 @@ function changeCartQuantity(id, amount) {
 function clearCart() {
   cart = [];
 
-  $("cartDiscount").value = 0;
-  $("paidAmount").value = "";
+  if ($("cartDiscount")) $("cartDiscount").value = 0;
+  if ($("paidAmount")) $("paidAmount").value = "";
 
   renderCart();
 }
@@ -2117,7 +2146,7 @@ function getCartTotals() {
   );
 
   const discount = Math.min(
-    Math.max(0, Number($("cartDiscount").value) || 0),
+    Math.max(0, Number($("cartDiscount")?.value) || 0),
     subtotal
   );
 
@@ -2130,13 +2159,10 @@ function getCartTotals() {
 
 function renderCart() {
   const container = $("cartItems");
+  if (!container) return;
 
-  const count = cart.reduce(
-    (sum, x) => sum + x.quantity,
-    0
-  );
-
-  $("cartCount").textContent = `${count} produk`;
+  const count = cart.reduce((sum, x) => sum + x.quantity, 0);
+  safeText("cartCount", `${count} produk`);
 
   if (!cart.length) {
     container.innerHTML = `
@@ -2162,20 +2188,18 @@ function renderCart() {
 
   const totals = getCartTotals();
 
-  $("cartSubtotal").textContent = rupiah(totals.subtotal);
-  $("cartDiscountDisplay").textContent = rupiah(totals.discount);
-  $("cartTotal").textContent = rupiah(totals.total);
+  safeText("cartSubtotal", rupiah(totals.subtotal));
+  safeText("cartDiscountDisplay", rupiah(totals.discount));
+  safeText("cartTotal", rupiah(totals.total));
 
   renderChange();
 }
 
 function renderChange() {
   const total = getCartTotals().total;
-  const paid = Number($("paidAmount").value) || 0;
+  const paid = Number($("paidAmount")?.value) || 0;
 
-  $("cartChange").textContent = rupiah(
-    Math.max(0, paid - total)
-  );
+  safeText("cartChange", rupiah(Math.max(0, paid - total)));
 }
 
 // ==========================================
@@ -2187,23 +2211,26 @@ async function checkout() {
   }
 
   const totals = getCartTotals();
-  const paid = Number($("paidAmount").value) || 0;
+  const paid = Number($("paidAmount")?.value) || 0;
 
   if (paid < totals.total) {
     return showToast("Uang pembayaran belum mencukupi.");
   }
 
-  if (!confirm(`Proses pembayaran ${rupiah(totals.total)}?`)) {
-    return;
-  }
+  if (!confirm(`Proses pembayaran ${rupiah(totals.total)}?`)) return;
 
-  const button = document.querySelector("#page-pos .cart-panel .btn-primary");
+  const button = document.querySelector(
+    "#page-pos .cart-panel .btn-primary"
+  );
+
   if (button) {
     button.disabled = true;
     button.textContent = "Memproses...";
   }
 
   try {
+    const paymentMethod = $("paymentMethod")?.value || "Tunai";
+
     const payload = {
       p_business_id: business.id,
       p_items: cart.map(x => ({
@@ -2212,11 +2239,10 @@ async function checkout() {
       })),
       p_discount: totals.discount,
       p_paid_amount: paid,
-      p_payment_method: $("paymentMethod").value
+      p_payment_method: paymentMethod
     };
 
     const { data, error } = await sb.rpc("bizora_checkout", payload);
-
     if (error) throw error;
 
     const result = Array.isArray(data) ? data[0] : data;
@@ -2233,7 +2259,7 @@ async function checkout() {
       total: totals.total,
       paid,
       change: paid - totals.total,
-      payment: $("paymentMethod").value,
+      payment: paymentMethod,
       store: { ...storeProfile },
       cashier: user?.email || "Kasir"
     };
@@ -2246,11 +2272,14 @@ async function checkout() {
     clearCart();
     renderAll();
 
-    $("successReceipt").innerHTML = buildReceiptHTML(lastReceipt);
+    if ($("successReceipt")) {
+      $("successReceipt").innerHTML = buildReceiptHTML(lastReceipt);
+    }
+
     openModal("successModal");
 
   } catch (err) {
-    console.error(err);
+    console.error("Checkout error:", err);
     showToast("Transaksi gagal: " + err.message);
   } finally {
     if (button) {
@@ -2260,7 +2289,6 @@ async function checkout() {
   }
 }
 
-// BAGIAN 2 SELESAI — LANJUTKAN DENGAN BAGIAN 3
   // ==========================================
 // TRANSACTIONS
 // ==========================================
@@ -2309,7 +2337,7 @@ function renderTransactions() {
           <strong>${escapeHTML(
             t.invoice_number ||
             t.invoice ||
-            String(t.id).slice(0,8)
+            String(t.id).slice(0, 8)
           )}</strong>
         </td>
         <td>${formatDate(transactionDate(t))}</td>
@@ -2342,13 +2370,17 @@ async function reprintTransaction(id) {
   }
 
   showToast(
-    "Struk transaksi lama belum bisa ditampilkan karena data item transaksi belum tersedia di aplikasi."
+    "Struk transaksi lama belum dapat ditampilkan karena detail item transaksi belum dimuat."
   );
 }
 
 // ==========================================
 // EXPENSES
 // ==========================================
+// Struktur kolom yang digunakan:
+// id, business_id, description, category, amount, created_at
+// Tidak menggunakan expense_date.
+
 async function loadExpenses() {
   const { data, error } = await sb
     .from("expenses")
@@ -2362,26 +2394,33 @@ async function loadExpenses() {
 }
 
 function openExpenseModal() {
-  $("expenseForm").reset();
-  $("expenseDate").value = todayString();
+  $("expenseForm")?.reset();
+
+  // Tanggal dipakai sebagai tampilan input.
+  // Database mencatat waktu melalui created_at.
+  if ($("expenseDate")) {
+    $("expenseDate").value = todayString();
+  }
 
   openModal("expenseModal");
 }
 
-$("expenseForm").addEventListener("submit", async e => {
+$("expenseForm")?.addEventListener("submit", async e => {
   e.preventDefault();
 
   const button = $("expenseForm").querySelector('button[type="submit"]');
-  button.disabled = true;
-  button.textContent = "Menyimpan...";
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Menyimpan...";
+  }
 
   try {
     const payload = {
       business_id: business.id,
       description: $("expenseName").value.trim(),
       category: $("expenseCategory").value,
-      amount: Number($("expenseAmount").value),
-      expense_date: $("expenseDate").value
+      amount: Number($("expenseAmount").value)
     };
 
     if (!payload.description) {
@@ -2406,11 +2445,13 @@ $("expenseForm").addEventListener("submit", async e => {
     showToast("Pengeluaran berhasil dicatat.");
 
   } catch (err) {
-    console.error(err);
+    console.error("Expense insert error:", err);
     showToast("Gagal menyimpan pengeluaran: " + err.message);
   } finally {
-    button.disabled = false;
-    button.textContent = "Simpan";
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Simpan";
+    }
   }
 });
 
@@ -2432,8 +2473,13 @@ async function deleteExpense(id) {
     showToast("Catatan pengeluaran dihapus.");
 
   } catch (err) {
+    console.error(err);
     showToast("Gagal menghapus: " + err.message);
   }
+}
+
+function getExpenseDate(expense) {
+  return expense.created_at;
 }
 
 function renderExpenses() {
@@ -2443,8 +2489,8 @@ function renderExpenses() {
   body.innerHTML = expenses.length
     ? expenses.map(x => `
       <tr>
-        <td>${formatDate(x.expense_date || x.created_at)}</td>
-        <td><strong>${escapeHTML(x.description || x.name || "-")}</strong></td>
+        <td>${formatDate(getExpenseDate(x))}</td>
+        <td><strong>${escapeHTML(x.description || "-")}</strong></td>
         <td>${escapeHTML(x.category || "-")}</td>
         <td><strong>${rupiah(x.amount)}</strong></td>
         <td>
@@ -2467,17 +2513,20 @@ function renderExpenses() {
 
   const monthTotal = expenses
     .filter(x => {
-      const d = new Date(x.expense_date || x.created_at);
+      if (!x.created_at) return false;
+
+      const d = new Date(x.created_at);
 
       return (
+        !Number.isNaN(d.getTime()) &&
         d.getMonth() === now.getMonth() &&
         d.getFullYear() === now.getFullYear()
       );
     })
     .reduce((sum, x) => sum + Number(x.amount || 0), 0);
 
-  $("expenseMonthTotal").textContent = rupiah(monthTotal);
-  $("expenseCount").textContent = expenses.length;
+  safeText("expenseMonthTotal", rupiah(monthTotal));
+  safeText("expenseCount", expenses.length);
 }
 
 // ==========================================
@@ -2526,21 +2575,23 @@ function renderBestSeller() {
 // PROMO CENTER
 // ==========================================
 function openPromoModal() {
-  $("promoForm").reset();
+  $("promoForm")?.reset();
 
-  $("promoProduct").innerHTML = products.length
-    ? products.map(p => `
-      <option value="${String(p.id)}">${escapeHTML(p.name)}</option>
-    `).join("")
-    : `<option value="">Belum ada produk</option>`;
+  if ($("promoProduct")) {
+    $("promoProduct").innerHTML = products.length
+      ? products.map(p => `
+          <option value="${String(p.id)}">${escapeHTML(p.name)}</option>
+        `).join("")
+      : `<option value="">Belum ada produk</option>`;
+  }
 
-  $("promoStart").value = todayString();
-  $("promoEnd").value = todayString();
+  if ($("promoStart")) $("promoStart").value = todayString();
+  if ($("promoEnd")) $("promoEnd").value = todayString();
 
   openModal("promoModal");
 }
 
-$("promoForm").addEventListener("submit", e => {
+$("promoForm")?.addEventListener("submit", e => {
   e.preventDefault();
 
   const promo = {
@@ -2560,7 +2611,7 @@ $("promoForm").addEventListener("submit", e => {
     return showToast("Nama promo wajib diisi.");
   }
 
-  if (promo.value < 0 || !Number.isFinite(promo.value)) {
+  if (!Number.isFinite(promo.value) || promo.value < 0) {
     return showToast("Nilai promo tidak valid.");
   }
 
@@ -2569,7 +2620,11 @@ $("promoForm").addEventListener("submit", e => {
   }
 
   promos.push(promo);
-  safeLocalStorageSet("bizora_promos", promos);
+
+  if (!safeLocalStorageSet("bizora_promos", promos)) {
+    promos.pop();
+    return;
+  }
 
   closeModal("promoModal");
   renderPromos();
@@ -2627,9 +2682,14 @@ function renderPromos() {
 }
 
 function deletePromo(id) {
+  const previous = [...promos];
+
   promos = promos.filter(p => String(p.id) !== String(id));
 
-  safeLocalStorageSet("bizora_promos", promos);
+  if (!safeLocalStorageSet("bizora_promos", promos)) {
+    promos = previous;
+    return;
+  }
 
   renderPromos();
   showToast("Promo dihapus.");
@@ -2638,7 +2698,7 @@ function deletePromo(id) {
 // ==========================================
 // BIZORA ASSISTANT — LOCAL RULE-BASED
 // ==========================================
-$("assistantForm").addEventListener("submit", e => {
+$("assistantForm")?.addEventListener("submit", e => {
   e.preventDefault();
 
   const question = $("assistantInput").value.trim().toLowerCase();
@@ -2665,7 +2725,8 @@ $("assistantForm").addEventListener("submit", e => {
 
   } else if (
     question.includes("penjualan") ||
-    question.includes("omzet")
+    question.includes("omzet") ||
+    question.includes("omset")
   ) {
     answer =
       `Total omzet dari transaksi yang berhasil dimuat adalah ${rupiah(totalSales)} dari ${transactions.length} transaksi.`;
@@ -2701,8 +2762,7 @@ $("assistantForm").addEventListener("submit", e => {
       question.includes("berapa")
     )
   ) {
-    answer =
-      `Saat ini ada ${products.length} produk yang terdaftar di tokomu.`;
+    answer = `Saat ini ada ${products.length} produk yang terdaftar di tokomu.`;
 
   } else if (
     question.includes("kategori") ||
@@ -2720,13 +2780,12 @@ $("assistantForm").addEventListener("submit", e => {
       `Ada ${transactions.length} transaksi yang berhasil dimuat dalam riwayat aplikasi.`;
   }
 
-  setTimeout(() => {
-    addAssistantMessage(answer, "bot");
-  }, 250);
+  setTimeout(() => addAssistantMessage(answer, "bot"), 250);
 });
 
 function addAssistantMessage(message, role) {
   const container = $("assistantMessages");
+  if (!container) return;
 
   const empty = container.querySelector(".empty-state");
   if (empty) empty.remove();
@@ -2767,24 +2826,37 @@ async function loadStoreSettings() {
 
   receiptSettings = data || {};
 
-  $("receiptWidth").value = String(receiptSettings.paper_width || "58");
-  $("receiptHeader").value = receiptSettings.header_message || "";
-  $("receiptFooter").value = receiptSettings.footer_message || "";
+  if ($("receiptWidth")) {
+    $("receiptWidth").value = String(receiptSettings.paper_width || "58");
+  }
 
-  $("showAddress").checked =
-    receiptSettings.show_store_address !== false;
+  if ($("receiptHeader")) {
+    $("receiptHeader").value = receiptSettings.header_message || "";
+  }
 
-  $("showPhone").checked =
-    receiptSettings.show_store_phone !== false;
+  if ($("receiptFooter")) {
+    $("receiptFooter").value = receiptSettings.footer_message || "";
+  }
 
-  $("showCashier").checked =
-    receiptSettings.show_cashier !== false;
+  if ($("showAddress")) {
+    $("showAddress").checked = receiptSettings.show_store_address !== false;
+  }
 
-  $("showDiscount").checked =
-    receiptSettings.show_discount !== false;
+  if ($("showPhone")) {
+    $("showPhone").checked = receiptSettings.show_store_phone !== false;
+  }
 
-  $("showPayment").checked =
-    receiptSettings.show_payment_method !== false;
+  if ($("showCashier")) {
+    $("showCashier").checked = receiptSettings.show_cashier !== false;
+  }
+
+  if ($("showDiscount")) {
+    $("showDiscount").checked = receiptSettings.show_discount !== false;
+  }
+
+  if ($("showPayment")) {
+    $("showPayment").checked = receiptSettings.show_payment_method !== false;
+  }
 
   renderReceiptPreview();
 }
@@ -2812,11 +2884,9 @@ async function saveReceiptSettings() {
     if (error) throw error;
 
     receiptSettings = data;
-
     renderReceiptPreview();
 
     showToast("Pengaturan struk berhasil disimpan.");
-
   } catch (err) {
     console.error(err);
     showToast("Gagal menyimpan pengaturan: " + err.message);
@@ -2856,7 +2926,7 @@ function renderReceiptPreview() {
           ? `<div>Kasir: ${escapeHTML(user?.email || "Kasir")}</div>`
           : ""
       }
-      <p>${escapeHTML($("receiptHeader").value || "Terima kasih telah berbelanja")}</p>
+      <p>${escapeHTML($("receiptHeader")?.value || "Terima kasih telah berbelanja")}</p>
     </div>
 
     <div style="border-top:1px dashed #aaa;margin:10px 0"></div>
@@ -2875,14 +2945,10 @@ function renderReceiptPreview() {
 
     <div><strong>Total</strong><strong style="float:right">Rp10.000</strong></div>
 
-    ${
-      showPayment
-        ? "<div>Metode: Tunai</div>"
-        : ""
-    }
+    ${showPayment ? "<div>Metode: Tunai</div>" : ""}
 
     <p style="text-align:center">
-      ${escapeHTML($("receiptFooter").value || "Sampai jumpa kembali")}
+      ${escapeHTML($("receiptFooter")?.value || "Sampai jumpa kembali")}
     </p>
   `;
 }
@@ -2897,8 +2963,8 @@ function renderReceiptPreview() {
   "showDiscount",
   "showPayment"
 ].forEach(id => {
-  $(id).addEventListener("input", renderReceiptPreview);
-  $(id).addEventListener("change", renderReceiptPreview);
+  $(id)?.addEventListener("input", renderReceiptPreview);
+  $(id)?.addEventListener("change", renderReceiptPreview);
 });
 
 // ==========================================
@@ -2913,20 +2979,11 @@ function buildReceiptHTML(receipt) {
     ? "80mm"
     : "58mm";
 
-  const showAddress =
-    receiptSettings.show_store_address !== false;
-
-  const showPhone =
-    receiptSettings.show_store_phone !== false;
-
-  const showCashier =
-    receiptSettings.show_cashier !== false;
-
-  const showDiscount =
-    receiptSettings.show_discount !== false;
-
-  const showPayment =
-    receiptSettings.show_payment_method !== false;
+  const showAddress = receiptSettings.show_store_address !== false;
+  const showPhone = receiptSettings.show_store_phone !== false;
+  const showCashier = receiptSettings.show_cashier !== false;
+  const showDiscount = receiptSettings.show_discount !== false;
+  const showPayment = receiptSettings.show_payment_method !== false;
 
   return `
     <div style="
@@ -2947,9 +3004,7 @@ function buildReceiptHTML(receipt) {
         }
 
         <strong>${escapeHTML(
-          store.store_name ||
-          business?.business_name ||
-          "Toko Saya"
+          store.store_name || business?.business_name || "Toko Saya"
         )}</strong>
 
         ${
@@ -2971,8 +3026,7 @@ function buildReceiptHTML(receipt) {
         }
 
         <p>${escapeHTML(
-          receiptSettings.header_message ||
-          "Terima kasih telah berbelanja"
+          receiptSettings.header_message || "Terima kasih telah berbelanja"
         )}</p>
       </div>
 
@@ -2983,7 +3037,7 @@ function buildReceiptHTML(receipt) {
 
       <div style="border-top:1px dashed #333;margin:9px 0"></div>
 
-      ${receipt.items.map(x => `
+      ${(receipt.items || []).map(x => `
         <div style="margin-bottom:7px">
           ${escapeHTML(x.name)}<br>
           ${Number(x.quantity)} x ${rupiah(x.price)}
@@ -3001,12 +3055,7 @@ function buildReceiptHTML(receipt) {
 
       ${
         showDiscount
-          ? `
-            <div>
-              Diskon
-              <span style="float:right">${rupiah(receipt.discount)}</span>
-            </div>
-          `
+          ? `<div>Diskon <span style="float:right">${rupiah(receipt.discount)}</span></div>`
           : ""
       }
 
@@ -3017,29 +3066,15 @@ function buildReceiptHTML(receipt) {
 
       <div style="clear:both"></div>
 
-      <div>
-        Dibayar
-        <span style="float:right">${rupiah(receipt.paid)}</span>
-      </div>
+      <div>Dibayar <span style="float:right">${rupiah(receipt.paid)}</span></div>
+      <div>Kembalian <span style="float:right">${rupiah(receipt.change)}</span></div>
 
-      <div>
-        Kembalian
-        <span style="float:right">${rupiah(receipt.change)}</span>
-      </div>
-
-      ${
-        showPayment
-          ? `<div>Metode: ${escapeHTML(receipt.payment)}</div>`
-          : ""
-      }
+      ${showPayment ? `<div>Metode: ${escapeHTML(receipt.payment)}</div>` : ""}
 
       <div style="border-top:1px dashed #333;margin:9px 0"></div>
 
       <p style="text-align:center">
-        ${escapeHTML(
-          receiptSettings.footer_message ||
-          "Sampai jumpa kembali"
-        )}
+        ${escapeHTML(receiptSettings.footer_message || "Sampai jumpa kembali")}
       </p>
     </div>
   `;
@@ -3053,12 +3088,16 @@ function printLastReceipt() {
     return showToast("Tidak ada struk untuk ditampilkan.");
   }
 
-  $("receiptPrintContent").innerHTML =
-    buildReceiptHTML(lastReceipt);
+  if ($("receiptPrintContent")) {
+    $("receiptPrintContent").innerHTML = buildReceiptHTML(lastReceipt);
+  }
 
   closeModal("successModal");
 
-  $("receiptPrintView").scrollTop = 0;
+  if ($("receiptPrintView")) {
+    $("receiptPrintView").scrollTop = 0;
+  }
+
   document.body.classList.add("print-mode");
 }
 
@@ -3071,19 +3110,17 @@ function doPrintReceipt() {
     return showToast("Tidak ada struk untuk dicetak.");
   }
 
-  // Dipanggil langsung dari tombol pengguna.
-  // Tidak memakai window.open agar lebih kompatibel dengan Safari iPhone.
   window.print();
 }
 
-// ==========================================
+  // ==========================================
 // DASHBOARD
 // ==========================================
 function renderDashboard() {
   const today = todayString();
 
   const todayTransactions = transactions.filter(t =>
-    String(transactionDate(t) || "").slice(0,10) === today
+    String(transactionDate(t) || "").slice(0, 10) === today
   );
 
   const todaySales = todayTransactions.reduce(
@@ -3093,44 +3130,51 @@ function renderDashboard() {
 
   const todayExpenses = expenses
     .filter(x =>
-      String(x.expense_date || x.created_at || "").slice(0,10) === today
+      String(x.created_at || "").slice(0, 10) === today
     )
     .reduce(
       (sum, x) => sum + Number(x.amount || 0),
       0
     );
 
-  $("statSales").textContent = rupiah(todaySales);
-  $("statTransactions").textContent = todayTransactions.length;
-  $("statProducts").textContent = products.length;
-  $("statExpenses").textContent = rupiah(todayExpenses);
+  safeText("statSales", rupiah(todaySales));
+  safeText("statTransactions", todayTransactions.length);
+  safeText("statProducts", products.length);
+  safeText("statExpenses", rupiah(todayExpenses));
 
-  $("dashboardTransactions").innerHTML =
-    todayTransactions.slice(0,6).map(t => `
-      <tr>
-        <td>${formatDate(transactionDate(t))}</td>
-        <td>${escapeHTML(
-          t.invoice_number ||
-          t.invoice ||
-          String(t.id).slice(0,8)
-        )}</td>
-        <td><strong>${rupiah(transactionTotal(t))}</strong></td>
-        <td><span class="pill green">Berhasil</span></td>
-      </tr>
-    `).join("") ||
-    `
-      <tr>
-        <td colspan="4">
-          <div class="empty-state">Belum ada transaksi hari ini.</div>
-        </td>
-      </tr>
-    `;
+  const transactionContainer = $("dashboardTransactions");
+
+  if (transactionContainer) {
+    transactionContainer.innerHTML =
+      todayTransactions.slice(0, 6).map(t => `
+        <tr>
+          <td>${formatDate(transactionDate(t))}</td>
+          <td>${escapeHTML(
+            t.invoice_number ||
+            t.invoice ||
+            String(t.id).slice(0, 8)
+          )}</td>
+          <td><strong>${rupiah(transactionTotal(t))}</strong></td>
+          <td><span class="pill green">Berhasil</span></td>
+        </tr>
+      `).join("") ||
+      `
+        <tr>
+          <td colspan="4">
+            <div class="empty-state">Belum ada transaksi hari ini.</div>
+          </td>
+        </tr>
+      `;
+  }
+
+  const bestContainer = $("dashboardBestSeller");
+  if (!bestContainer) return;
 
   const best = products
     .filter(p => isFeatured(p.id))
-    .slice(0,5);
+    .slice(0, 5);
 
-  $("dashboardBestSeller").innerHTML = best.length
+  bestContainer.innerHTML = best.length
     ? best.map(p => `
       <div class="cart-line" style="align-items:center">
         <div class="product-cell">
@@ -3156,6 +3200,7 @@ function renderAll() {
   renderDashboard();
   renderProducts();
   renderPOSProducts();
+  renderCart();
   renderTransactions();
   renderExpenses();
   renderBestSeller();
@@ -3188,8 +3233,8 @@ document.addEventListener("keydown", e => {
       closeReceiptPrintView();
     }
 
-    $("sidebar").classList.remove("open");
-    $("mobileOverlay").classList.remove("show");
+    $("sidebar")?.classList.remove("open");
+    $("mobileOverlay")?.classList.remove("show");
   }
 });
 
@@ -3203,118 +3248,65 @@ window.addEventListener("error", event => {
 window.addEventListener("unhandledrejection", event => {
   console.error("Bizora async error:", event.reason);
 });
-  
+
 // ==========================================
 // BIZORA DARK / LIGHT MODE
 // ==========================================
-
 function setBizoraTheme(theme) {
+  const selectedTheme = theme === "dark" ? "dark" : "light";
+
   document.body.classList.toggle(
     "dark-mode",
-    theme === "dark"
+    selectedTheme === "dark"
   );
 
-  const label = document.getElementById("themeLabel");
+  const label = $("themeLabel");
 
   if (label) {
     label.textContent =
-      theme === "dark" ? "Mode Terang" : "Mode Gelap";
+      selectedTheme === "dark" ? "Mode Terang" : "Mode Gelap";
   }
 
-  localStorage.setItem("bizora_theme", theme);
+  try {
+    localStorage.setItem("bizora_theme", selectedTheme);
+  } catch (error) {
+    console.warn("Gagal menyimpan tema:", error);
+  }
 }
 
-document.addEventListener("DOMContentLoaded", function () {
-  const savedTheme =
-    localStorage.getItem("bizora_theme") || "light";
+function initializeBizoraTheme() {
+  let savedTheme = "light";
+
+  try {
+    savedTheme = localStorage.getItem("bizora_theme") || "light";
+  } catch (error) {
+    console.warn("Tema lokal tidak dapat dibaca:", error);
+  }
 
   setBizoraTheme(savedTheme);
 
-  const toggle = document.getElementById("themeToggle");
+  const toggle = $("themeToggle");
 
-  if (toggle) {
-    toggle.addEventListener("click", function () {
-      const isDark =
-        document.body.classList.contains("dark-mode");
+  if (toggle && !toggle.dataset.bizoraThemeBound) {
+    toggle.dataset.bizoraThemeBound = "true";
 
+    toggle.addEventListener("click", () => {
+      const isDark = document.body.classList.contains("dark-mode");
       setBizoraTheme(isDark ? "light" : "dark");
     });
   }
-});
-
-// ==========================================
-// END BIZORA THEME
-// ==========================================
-
-  // ==========================================
-// HAPUS PRODUK BIZORA
-// ==========================================
-
-async function deleteProduct(productId) {
-  const product = products.find(
-    p => String(p.id) === String(productId)
-  );
-
-  if (!product) {
-    alert("Produk tidak ditemukan.");
-    return;
-  }
-
-  const confirmation = confirm(
-    `Yakin ingin menghapus produk "${product.name}"?\n\nProduk yang dihapus tidak bisa dikembalikan.`
-  );
-
-  if (!confirmation) return;
-
-  try {
-    const { error } = await sb
-      .from("products")
-      .delete()
-      .eq("id", productId)
-      .eq("business_id", business.id);
-
-    if (error) throw error;
-
-    // Hapus dari daftar produk lokal
-    products = products.filter(
-      p => String(p.id) !== String(productId)
-    );
-
-    // Hapus dari daftar Best Seller lokal
-    const featured = JSON.parse(
-      localStorage.getItem("bizora_featured") || "[]"
-    );
-
-    localStorage.setItem(
-      "bizora_featured",
-      JSON.stringify(
-        featured.filter(id => String(id) !== String(productId))
-      )
-    );
-
-    renderProducts();
-
-    if (typeof renderPOSProducts === "function") {
-      renderPOSProducts();
-    }
-
-    if (typeof renderDashboard === "function") {
-      renderDashboard();
-    }
-
-    alert("Produk berhasil dihapus!");
-
-  } catch (error) {
-    console.error("Gagal menghapus produk:", error);
-    alert("Gagal menghapus produk: " + error.message);
-  }
 }
-  
-/* =========================================
-   BIZORA DATA PROTECTION
-   Manual Backup & Restore
-========================================= */
 
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeBizoraTheme);
+} else {
+  initializeBizoraTheme();
+}
+
+// ==========================================
+// BIZORA DATA PROTECTION
+// MANUAL BACKUP & VALIDATION
+// ==========================================
 const BIZORA_BACKUP_VERSION = 1;
 
 const BIZORA_BACKUP_TABLES = [
@@ -3328,42 +3320,52 @@ async function bizoraGetBackupUser() {
   const { data, error } = await sb.auth.getUser();
 
   if (error) throw error;
-  if (!data.user) throw new Error("Silakan login terlebih dahulu.");
+  if (!data.user) {
+    throw new Error("Silakan login terlebih dahulu.");
+  }
 
   return data.user;
 }
 
+// ==========================================
+// DOWNLOAD BACKUP
+// ==========================================
 async function bizoraDownloadBackup() {
-  const button = document.getElementById("backupDownloadBtn");
+  const button = $("backupDownloadBtn");
 
   try {
+    if (!business?.id) {
+      throw new Error("Data bisnis belum siap. Muat ulang aplikasi.");
+    }
+
     if (button) {
       button.disabled = true;
       button.textContent = "Membuat Backup...";
     }
 
-    const user = await bizoraGetBackupUser();
+    const backupUser = await bizoraGetBackupUser();
 
     const backupData = {
       app: "Bizora",
       version: BIZORA_BACKUP_VERSION,
       created_at: new Date().toISOString(),
-      user_id: user.id,
+      user_id: backupUser.id,
+      business_id: business.id,
       tables: {}
     };
 
     const backupSummary = {};
     let totalRecords = 0;
 
-    // AMBIL DAN HITUNG DATA SETIAP TABEL
     for (const table of BIZORA_BACKUP_TABLES) {
       const { data, error } = await sb
         .from(table)
-        .select("*");
+        .select("*")
+        .eq("business_id", business.id);
 
       if (error) {
         throw new Error(
-          "Gagal mengambil data " + table + ": " + error.message
+          `Gagal mengambil data ${table}: ${error.message}`
         );
       }
 
@@ -3374,7 +3376,6 @@ async function bizoraDownloadBackup() {
       totalRecords += rows.length;
     }
 
-    // BUAT FILE BACKUP
     const jsonData = JSON.stringify(backupData, null, 2);
 
     const file = new Blob(
@@ -3391,59 +3392,51 @@ async function bizoraDownloadBackup() {
 
     link.href = url;
     link.download =
-      "bizora-backup-" +
-      new Date().toISOString().slice(0, 10) +
-      ".json";
+      `bizora-backup-${todayString()}.json`;
 
     document.body.appendChild(link);
     link.click();
     link.remove();
 
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
 
-    // SIMPAN INFORMASI BACKUP
     const date = new Date().toLocaleString("id-ID");
 
-    localStorage.setItem("bizora_last_backup", date);
-    localStorage.setItem(
-      "bizora_backup_summary",
-      JSON.stringify({
-        created_at: backupData.created_at,
-        total_records: totalRecords,
-        tables: backupSummary,
-        file_size: file.size
-      })
-    );
+    try {
+      localStorage.setItem("bizora_last_backup", date);
 
-    const lastDate = document.getElementById("backupLastDate");
-
-    if (lastDate) {
-      lastDate.textContent = date;
+      localStorage.setItem(
+        "bizora_backup_summary",
+        JSON.stringify({
+          created_at: backupData.created_at,
+          total_records: totalRecords,
+          tables: backupSummary,
+          file_size: file.size
+        })
+      );
+    } catch (storageError) {
+      console.warn("Metadata backup tidak tersimpan:", storageError);
     }
 
-    // TAMPILKAN RINGKASAN
+    safeText("backupLastDate", date);
+
     const summaryText = Object.entries(backupSummary)
-      .map(([table, count]) => table + ": " + count + " data")
+      .map(([table, count]) => `${table}: ${count} data`)
       .join("\n");
 
     alert(
       "BACKUP BIZORA BERHASIL!\n\n" +
       summaryText +
       "\n\nTotal data: " + totalRecords +
-      "\nUkuran file: " +
-      (file.size / 1024).toFixed(2) + " KB" +
+      "\nUkuran file: " + (file.size / 1024).toFixed(2) + " KB" +
       "\nWaktu: " + date
     );
 
-    if (typeof showToast === "function") {
-      showToast("Backup berhasil dibuat dan diverifikasi.");
-    }
+    showToast("Backup berhasil dibuat.");
 
   } catch (error) {
     console.error("Bizora backup error:", error);
-
     alert("Backup gagal: " + error.message);
-
   } finally {
     if (button) {
       button.disabled = false;
@@ -3452,15 +3445,16 @@ async function bizoraDownloadBackup() {
   }
 }
 
-
-
+// ==========================================
+// RESTORE BACKUP — VALIDATION ONLY
+// Belum menulis data ke database.
+// ==========================================
 async function bizoraRestoreBackup(file) {
   if (!file) return;
 
   try {
-    const user = await bizoraGetBackupUser();
+    const backupUser = await bizoraGetBackupUser();
 
-    // 1. VALIDASI FORMAT FILE
     if (!file.name.toLowerCase().endsWith(".json")) {
       throw new Error("File harus berformat JSON.");
     }
@@ -3479,7 +3473,6 @@ async function bizoraRestoreBackup(file) {
       throw new Error("File backup rusak atau format JSON tidak valid.");
     }
 
-    // 2. VALIDASI IDENTITAS DAN VERSI
     if (backup.app !== "Bizora") {
       throw new Error("File ini bukan backup Bizora.");
     }
@@ -3488,15 +3481,18 @@ async function bizoraRestoreBackup(file) {
       throw new Error("Versi backup tidak kompatibel.");
     }
 
-    if (backup.user_id !== user.id) {
+    if (backup.user_id !== backupUser.id) {
       throw new Error("Backup bukan milik akun Bizora ini.");
+    }
+
+    if (backup.business_id !== business?.id) {
+      throw new Error("Backup bukan milik toko yang sedang dibuka.");
     }
 
     if (!backup.tables || typeof backup.tables !== "object") {
       throw new Error("Struktur data backup tidak valid.");
     }
 
-    // 3. VALIDASI SELURUH TABEL WAJIB
     const missingTables = [];
     const invalidTables = [];
     const summary = {};
@@ -3531,9 +3527,8 @@ async function bizoraRestoreBackup(file) {
       );
     }
 
-    // 4. TAMPILKAN HASIL PEMERIKSAAN
     const summaryText = Object.entries(summary)
-      .map(([table, count]) => table + ": " + count + " data")
+      .map(([table, count]) => `${table}: ${count} data`)
       .join("\n");
 
     const confirmed = confirm(
@@ -3543,26 +3538,72 @@ async function bizoraRestoreBackup(file) {
       "\nDibuat: " + new Date(backup.created_at).toLocaleString("id-ID") +
       "\n\n" + summaryText +
       "\n\nTotal data: " + totalRecords +
-      "\n\nFile lolos pemeriksaan keamanan.\n" +
-      "Belum ada data database yang diubah.\n\n" +
-      "Lanjutkan ke tahap berikutnya?"
+      "\n\nFile lolos pemeriksaan struktur dan akun.\n" +
+      "Database belum diubah.\n\n" +
+      "Lanjutkan pemeriksaan?"
     );
 
     if (!confirmed) return;
 
-    // 5. RESTORE BELUM MENGUBAH DATABASE
     alert(
-      "Pemeriksaan Backup Berhasil!\n\n" +
-      "File aman secara struktur dan identitas akun.\n" +
+      "Pemeriksaan backup berhasil!\n\n" +
+      "File sesuai dengan akun dan toko ini.\n" +
       "Data database belum diubah.\n\n" +
-      "Tahap pemulihan penuh akan diaktifkan " +
-      "setelah mekanisme relasi dan keamanan database disiapkan."
+      "Pemulihan penuh belum diaktifkan agar data lama tidak tertimpa atau rusak."
     );
 
   } catch (error) {
-    console.error("Bizora Backup Protection:", error);
-    alert("Backup Protection gagal: " + error.message);
+    console.error("Bizora Restore Validation:", error);
+    alert("Pemeriksaan backup gagal: " + error.message);
   }
+}
+
+// ==========================================
+// BACKUP BUTTON CONNECTION
+// ==========================================
+function initializeBackupButtons() {
+  const downloadButton = $("backupDownloadBtn");
+
+  if (downloadButton && !downloadButton.dataset.bizoraBackupBound) {
+    downloadButton.dataset.bizoraBackupBound = "true";
+
+    downloadButton.addEventListener("click", bizoraDownloadBackup);
+  }
+
+  // Mendukung beberapa kemungkinan ID input file restore.
+  const restoreInput =
+    $("backupRestoreInput") ||
+    $("backupFileInput") ||
+    $("restoreBackupFile");
+
+  if (restoreInput && !restoreInput.dataset.bizoraRestoreBound) {
+    restoreInput.dataset.bizoraRestoreBound = "true";
+
+    restoreInput.addEventListener("change", async e => {
+      const file = e.target.files?.[0];
+
+      if (file) {
+        await bizoraRestoreBackup(file);
+      }
+
+      e.target.value = "";
+    });
+  }
+
+  try {
+    safeText(
+      "backupLastDate",
+      localStorage.getItem("bizora_last_backup") || "Belum pernah backup"
+    );
+  } catch (error) {
+    console.warn(error);
+  }
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initializeBackupButtons);
+} else {
+  initializeBackupButtons();
 }
 
 </script>
