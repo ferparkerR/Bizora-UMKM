@@ -916,180 +916,166 @@ async function logout(){
 await sb.auth.signOut();
 location.reload();
 }
-  
 
+  
 // ============================================
 // PENGATURAN STRUK BIZORA
 // ============================================
 
-function getReceiptFormData() {
+function getReceiptFormData(){
   return {
+    business_id: currentBusiness.id,
     paper_width: document.getElementById("receiptPaper").value,
     header_message: document.getElementById("receiptHeader").value.trim(),
     footer_message: document.getElementById("receiptFooter").value.trim(),
-    show_store_address: document.getElementById("receiptAddress").checked,
-    show_store_phone: document.getElementById("receiptPhone").checked,
-    show_cashier: document.getElementById("receiptCashier").checked,
-    show_discount: document.getElementById("receiptDiscount").checked,
-    show_payment_method: document.getElementById("receiptPayment").checked
+    show_store_address: document.getElementById("receiptShowAddress").checked,
+    show_store_phone: document.getElementById("receiptShowPhone").checked,
+    show_cashier: document.getElementById("receiptShowCashier").checked,
+    show_discount: document.getElementById("receiptShowDiscount").checked,
+    show_payment_method: document.getElementById("receiptShowPayment").checked
   };
 }
 
-async function loadReceiptSettings() {
-  if (!currentBusiness) return;
+async function loadReceiptSettings(){
+  if(!currentBusiness) return;
 
-  const { data, error } = await sb
+  const {data,error}=await sb
     .from("receipt_settings")
     .select("*")
-    .eq("business_id", currentBusiness.id)
+    .eq("business_id",currentBusiness.id)
     .maybeSingle();
 
-  if (error) {
-    console.error("Gagal memuat pengaturan struk:", error);
+  if(error){
+    console.error("Gagal memuat pengaturan struk:",error);
     return;
   }
 
-  receiptSettings = data || {
-    paper_width: "80",
-    header_message: "",
-    footer_message: "Terima kasih telah berbelanja!",
-    show_store_address: true,
-    show_store_phone: true,
-    show_cashier: true,
-    show_discount: true,
-    show_payment_method: true
-  };
+  if(data){
+    receiptSettings=data;
+  }else{
+    const defaults={
+      business_id:currentBusiness.id,
+      paper_width:"80",
+      header_message:"",
+      footer_message:"",
+      show_store_address:true,
+      show_store_phone:true,
+      show_cashier:true,
+      show_discount:true,
+      show_payment_method:true
+    };
 
-  document.getElementById("receiptPaper").value =
-    receiptSettings.paper_width || "80";
+    const {data:newData,error:insertError}=await sb
+      .from("receipt_settings")
+      .upsert(defaults,{onConflict:"business_id"})
+      .select()
+      .single();
 
-  document.getElementById("receiptHeader").value =
-    receiptSettings.header_message || "";
+    if(insertError){
+      console.error("Gagal membuat pengaturan struk:",insertError);
+      receiptSettings=defaults;
+    }else{
+      receiptSettings=newData;
+    }
+  }
 
-  document.getElementById("receiptFooter").value =
-    receiptSettings.footer_message || "";
+  document.getElementById("receiptPaper").value=receiptSettings.paper_width||"80";
+  document.getElementById("receiptHeader").value=receiptSettings.header_message||"";
+  document.getElementById("receiptFooter").value=receiptSettings.footer_message||"";
 
-  document.getElementById("receiptAddress").checked =
-    receiptSettings.show_store_address ?? true;
+  document.getElementById("receiptShowAddress").checked=receiptSettings.show_store_address;
+  document.getElementById("receiptShowPhone").checked=receiptSettings.show_store_phone;
+  document.getElementById("receiptShowCashier").checked=receiptSettings.show_cashier;
+  document.getElementById("receiptShowDiscount").checked=receiptSettings.show_discount;
+  document.getElementById("receiptShowPayment").checked=receiptSettings.show_payment_method;
 
-  document.getElementById("receiptPhone").checked =
-    receiptSettings.show_store_phone ?? true;
-
-  document.getElementById("receiptCashier").checked =
-    receiptSettings.show_cashier ?? true;
-
-  document.getElementById("receiptDiscount").checked =
-    receiptSettings.show_discount ?? true;
-
-  document.getElementById("receiptPayment").checked =
-    receiptSettings.show_payment_method ?? true;
-
-  updateReceiptPreview();
   setupReceiptPreviewEvents();
+  updateReceiptPreview();
 }
 
-function updateReceiptPreview() {
-  const settings = getReceiptFormData();
+function updateReceiptPreview(){
+  const name=storeProfile?.store_name||currentBusiness?.business_name||"Nama Toko";
+  const address=storeProfile?.store_address||"";
+  const phone=storeProfile?.store_phone||"";
 
-  const preview = document.getElementById("receiptPreview");
-  if (!preview) return;
+  const previewName=document.getElementById("receiptPreviewName");
+  const previewAddress=document.getElementById("receiptPreviewAddress");
+  const previewPhone=document.getElementById("receiptPreviewPhone");
+  const previewHeader=document.getElementById("receiptPreviewHeader");
+  const previewFooter=document.getElementById("receiptPreviewFooter");
+  const preview=document.getElementById("receiptPreview");
 
-  const storeName =
-    storeProfile?.store_name ||
-    currentBusiness?.business_name ||
-    "Nama Toko";
+  previewName.textContent=name;
 
-  const address = storeProfile?.store_address || "";
-  const phone = storeProfile?.store_phone || "";
+  previewAddress.textContent=address;
+  previewAddress.style.display=
+    document.getElementById("receiptShowAddress").checked&&address
+    ?"block":"none";
 
-  preview.style.width =
-    settings.paper_width === "58" ? "230px" : "100%";
+  previewPhone.textContent=phone;
+  previewPhone.style.display=
+    document.getElementById("receiptShowPhone").checked&&phone
+    ?"block":"none";
 
-  document.getElementById("previewStoreName").textContent = storeName;
+  previewHeader.textContent=document.getElementById("receiptHeader").value;
+  previewFooter.textContent=document.getElementById("receiptFooter").value;
 
-  document.getElementById("previewHeader").textContent =
-    settings.header_message;
-
-  document.getElementById("previewAddress").textContent =
-    settings.show_store_address ? address : "";
-
-  document.getElementById("previewPhone").textContent =
-    settings.show_store_phone ? phone : "";
-
-  document.getElementById("previewCashier").textContent =
-    settings.show_cashier
-      ? "Kasir: " + (currentUser?.email || "-")
-      : "";
-
-  document.getElementById("previewDiscount").style.display =
-    settings.show_discount ? "" : "none";
-
-  document.getElementById("previewPayment").style.display =
-    settings.show_payment_method ? "" : "none";
-
-  document.getElementById("previewFooter").textContent =
-    settings.footer_message;
+  preview.style.width=
+    document.getElementById("receiptPaper").value==="58"
+    ?"230px":"100%";
 }
 
-function setupReceiptPreviewEvents() {
-  const ids = [
+function setupReceiptPreviewEvents(){
+  const ids=[
     "receiptPaper",
     "receiptHeader",
     "receiptFooter",
-    "receiptAddress",
-    "receiptPhone",
-    "receiptCashier",
-    "receiptDiscount",
-    "receiptPayment"
+    "receiptShowAddress",
+    "receiptShowPhone",
+    "receiptShowCashier",
+    "receiptShowDiscount",
+    "receiptShowPayment"
   ];
 
-  ids.forEach(id => {
-    const element = document.getElementById(id);
+  ids.forEach(id=>{
+    const element=document.getElementById(id);
 
-    if (element && !element.dataset.previewListener) {
-      element.addEventListener("input", updateReceiptPreview);
-      element.addEventListener("change", updateReceiptPreview);
-      element.dataset.previewListener = "true";
-    }
+    if(element.dataset.previewListener==="true") return;
+
+    element.addEventListener("input",updateReceiptPreview);
+    element.addEventListener("change",updateReceiptPreview);
+
+    element.dataset.previewListener="true";
   });
 }
 
-async function saveReceiptSettings() {
-  if (!currentBusiness) {
-    return showMessage("receiptMessage", "Bisnis tidak ditemukan.");
+async function saveReceiptSettings(){
+  if(!currentBusiness){
+    return showMessage("receiptSettingsMessage","Sesi bisnis tidak ditemukan.");
   }
 
-  const settings = getReceiptFormData();
+  const settings=getReceiptFormData();
 
-  showMessage("receiptMessage", "Menyimpan pengaturan...");
+  showMessage("receiptSettingsMessage","Menyimpan pengaturan...");
 
-  const { data, error } = await sb
+  const {data,error}=await sb
     .from("receipt_settings")
-    .upsert({
-      business_id: currentBusiness.id,
-      ...settings,
-      updated_at: new Date().toISOString()
-    }, {
-      onConflict: "business_id"
-    })
+    .upsert(settings,{onConflict:"business_id"})
     .select()
     .single();
 
-  if (error) {
-    console.error("Gagal menyimpan pengaturan:", error);
-    return showMessage(
-      "receiptMessage",
-      "Gagal menyimpan: " + error.message
-    );
+  if(error){
+    console.error("Gagal menyimpan pengaturan struk:",error);
+    return showMessage("receiptSettingsMessage","Gagal menyimpan: "+error.message);
   }
 
-  receiptSettings = data;
+  receiptSettings=data;
 
-  showMessage("receiptMessage", "Pengaturan struk berhasil disimpan!");
   updateReceiptPreview();
+
+  showMessage("receiptSettingsMessage","Pengaturan struk berhasil disimpan!");
 }
 
-  
 // ============================================
 // INITIALIZATION
 // ============================================
@@ -1322,9 +1308,9 @@ function showReceipt(items, totals, payment){
   const settings=receiptSettings||{};
   const profile=storeProfile||{};
 
-  const storeName=profile.store_name||currentBusiness?.name||"Nama Toko";
-  const address=profile.address||"";
-  const phone=profile.phone||"";
+  const storeName=profile.store_name||currentBusiness?.business_name||"Nama Toko";
+const address=profile.store_address||"";
+const phone=profile.store_phone||"";
 
   const money=value=>"Rp"+Number(value||0).toLocaleString("id-ID");
 
