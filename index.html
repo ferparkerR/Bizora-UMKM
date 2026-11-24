@@ -594,12 +594,17 @@ Data bisnis kamu disimpan secara online melalui Supabase.
 <div id="dashboard" class="hidden">
 
 <header class="topbar">
-<div class="brand" id="dashboardBrand">Bizora<span>.</span></div>
+  <div class="brand" id="dashboardBrand" style="display:flex;align-items:center;gap:10px">
+    <img id="dashboardLogo"
+         src=""
+         style="display:none;width:38px;height:38px;object-fit:cover;border-radius:10px">
+    <span id="dashboardStoreName">Bizora<span>.</span></span>
+  </div>
 
-<div class="top-actions">
-<span class="badge">Business Workspace</span>
-<button class="btn ghost small" onclick="logout()">Keluar</button>
-</div>
+  <div class="top-actions">
+    <span class="badge">Business Workspace</span>
+    <button class="btn ghost small" onclick="logout()">Keluar</button>
+  </div>
 </header>
 
 <div class="mobile-nav" id="mobileNav"></div>
@@ -1264,25 +1269,30 @@ storeProfile?.store_name||
 currentBusiness?.business_name||
 "Bizora";
 
+const nameElement=document.getElementById("dashboardStoreName");
+if(nameElement){
+nameElement.textContent=storeName;
+}
+
 const welcome=document.getElementById("welcome");
 if(welcome) welcome.textContent=storeName;
 
 const businessLabel=document.getElementById("businessLabel");
 if(businessLabel) businessLabel.textContent=storeName;
 
-const brand=document.getElementById("dashboardBrand");
-if(brand){
-brand.innerHTML=escapeHTML(storeName)+'<span>.</span>';
-}
-
-const logo=storeProfile?.store_logo;
-
+const logo=document.getElementById("dashboardLogo");
 if(logo){
-const logoHTML='<img src="'+escapeHTML(logo)+'" style="width:32px;height:32px;object-fit:cover;border-radius:9px;margin-right:9px;vertical-align:middle">';
-if(brand) brand.innerHTML=logoHTML+escapeHTML(storeName)+'<span>.</span>';
+if(storeProfile?.store_logo){
+logo.src=storeProfile.store_logo;
+logo.style.display="block";
+}else{
+logo.removeAttribute("src");
+logo.style.display="none";
+}
 }
 
 }
+
 function selectStoreColor(color){
 
 selectedStoreColor=color;
