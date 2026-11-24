@@ -370,6 +370,36 @@ border:1px solid var(--border);
 border-radius:999px;
 color:var(--muted);
 }
+  
+.color-option{
+width:42px;
+height:42px;
+border-radius:12px;
+border:3px solid transparent;
+transition:.2s;
+}
+
+.color-option.selected{
+border-color:white;
+transform:scale(1.1);
+box-shadow:0 0 0 2px var(--primary);
+}
+
+#logoPreview img,
+#previewLogo img{
+width:100%;
+height:100%;
+object-fit:cover;
+}
+
+#logoInput{
+padding:10px;
+font-size:12px;
+}
+
+#brandingPreview{
+transition:.2s;
+}
 
 .auth-wrap{
 max-width:440px;
@@ -564,7 +594,7 @@ Data bisnis kamu disimpan secara online melalui Supabase.
 <div id="dashboard" class="hidden">
 
 <header class="topbar">
-<div class="brand">Bizora<span>.</span></div>
+<div class="brand" id="dashboardBrand">Bizora<span>.</span></div>
 
 <div class="top-actions">
 <span class="badge">Business Workspace</span>
@@ -821,7 +851,274 @@ Data bisnis kamu disimpan secara online melalui Supabase.
 </div>
 
 </section>
+  
+<!-- PENGATURAN TOKO -->
+<section id="page-settings" class="page">
 
+<div class="page-head">
+<div>
+<h1>Pengaturan Toko</h1>
+<div class="subtitle">
+Personalisasi Bizora sesuai identitas usaha kamu.
+</div>
+</div>
+</div>
+
+<div class="grid two">
+
+<div class="card">
+
+<h2>Identitas toko</h2>
+
+<div class="form-grid">
+
+<div class="field full">
+<label>Nama toko</label>
+<input
+id="storeName"
+placeholder="Nama toko kamu"
+>
+</div>
+
+<div class="field full">
+<label>Alamat toko</label>
+<input
+id="storeAddress"
+placeholder="Alamat lengkap toko"
+>
+</div>
+
+<div class="field full">
+<label>Nomor telepon</label>
+<input
+id="storePhone"
+type="tel"
+placeholder="08xxxxxxxxxx"
+>
+</div>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>Logo toko</h2>
+
+<div style="margin-top:18px">
+
+<div
+id="logoPreview"
+style="
+width:100px;
+height:100px;
+border-radius:18px;
+background:#26314a;
+display:flex;
+align-items:center;
+justify-content:center;
+overflow:hidden;
+font-size:35px;
+margin-bottom:15px;
+"
+>
+🏪
+</div>
+
+<input
+id="logoInput"
+type="file"
+accept="image/*"
+>
+
+<div class="notice">
+Upload logo usaha kamu dari galeri HP.
+Format gambar yang didukung mengikuti browser.
+</div>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>Warna identitas toko</h2>
+
+<p class="subtitle">
+Pilih warna utama dashboard usaha kamu.
+</p>
+
+<div
+style="
+display:flex;
+flex-wrap:wrap;
+gap:12px;
+margin-top:20px;
+"
+>
+
+<button
+type="button"
+class="color-option"
+data-color="#6366f1"
+style="background:#6366f1"
+onclick="selectStoreColor('#6366f1')"
+></button>
+
+<button
+type="button"
+class="color-option"
+data-color="#16a34a"
+style="background:#16a34a"
+onclick="selectStoreColor('#16a34a')"
+></button>
+
+<button
+type="button"
+class="color-option"
+data-color="#0ea5e9"
+style="background:#0ea5e9"
+onclick="selectStoreColor('#0ea5e9')"
+></button>
+
+<button
+type="button"
+class="color-option"
+data-color="#f97316"
+style="background:#f97316"
+onclick="selectStoreColor('#f97316')"
+></button>
+
+<button
+type="button"
+class="color-option"
+data-color="#db2777"
+style="background:#db2777"
+onclick="selectStoreColor('#db2777')"
+></button>
+
+<button
+type="button"
+class="color-option"
+data-color="#14b8a6"
+style="background:#14b8a6"
+onclick="selectStoreColor('#14b8a6')"
+></button>
+
+</div>
+
+<div class="field" style="margin-top:20px">
+
+<label>Atau pilih warna sendiri</label>
+
+<input
+id="customColor"
+type="color"
+value="#6366f1"
+onchange="selectStoreColor(this.value)"
+style="
+height:55px;
+padding:5px;
+cursor:pointer;
+"
+>
+
+</div>
+
+</div>
+
+<div class="card">
+
+<h2>Preview identitas</h2>
+
+<div
+id="brandingPreview"
+style="
+border:1px solid var(--border);
+border-radius:14px;
+padding:20px;
+margin-top:15px;
+"
+>
+
+<div style="display:flex;align-items:center;gap:12px">
+
+<div
+id="previewLogo"
+style="
+width:48px;
+height:48px;
+border-radius:12px;
+background:#26314a;
+display:grid;
+place-items:center;
+font-size:22px;
+overflow:hidden;
+"
+>
+🏪
+</div>
+
+<div>
+
+<div
+id="previewStoreName"
+style="
+font-weight:800;
+font-size:17px;
+"
+>
+Nama Toko
+</div>
+
+<div
+style="
+font-size:12px;
+color:var(--muted);
+margin-top:4px;
+"
+>
+Business Dashboard
+</div>
+
+</div>
+
+</div>
+
+<div
+id="previewColor"
+style="
+height:8px;
+border-radius:99px;
+margin-top:20px;
+background:#6366f1;
+"
+></div>
+
+</div>
+
+<div class="form-actions">
+
+<button
+class="btn"
+onclick="saveStoreSettings()"
+>
+Simpan pengaturan
+</button>
+
+</div>
+
+<div
+id="settingsMessage"
+class="message"
+></div>
+
+</div>
+
+</div>
+
+</section>
+  
 <!-- LAPORAN -->
 <section id="page-reports" class="page">
 
@@ -894,6 +1191,11 @@ SUPABASE_KEY
 
 let currentUser = null;
 let currentBusiness = null;
+let storeProfile = null;
+
+let selectedStoreColor = "#6366f1";
+
+let uploadedLogoFile = null;
 
 let cache = {
 transactions:[],
@@ -909,7 +1211,8 @@ const navItems = [
 {id:"dashboard",icon:"⌂",label:"Dashboard"},
 {id:"products",icon:"▦",label:"Produk"},
 {id:"transactions",icon:"↔",label:"Transaksi"},
-{id:"reports",icon:"▤",label:"Laporan"}
+{id:"reports",icon:"▤",label:"Laporan"},
+{id:"settings",icon:"⚙",label:"Pengaturan"}
 ];
 
 function navHTML(){
@@ -945,6 +1248,320 @@ renderReport();
 window.scrollTo({top:0,behavior:"smooth"});
 }
 
+  // ============================================
+// STORE BRANDING
+// ============================================
+
+function applyStoreBranding(){
+
+const color=storeProfile?.store_color||"#6366f1";
+
+selectedStoreColor=color;
+
+document.documentElement.style.setProperty(
+"--primary",
+color
+);
+
+document.documentElement.style.setProperty(
+"--primary2",
+color
+);
+
+const storeName=
+storeProfile?.store_name||
+currentBusiness?.business_name||
+"Bizora";
+
+document.getElementById("welcome").textContent=storeName;
+
+document.getElementById("businessLabel").textContent=storeName;
+
+document.querySelector(".brand").innerHTML=
+escapeHTML(storeName)+
+'<span>.</span>';
+
+}
+
+function selectStoreColor(color){
+
+selectedStoreColor=color;
+
+document.getElementById("customColor").value=color;
+
+document.querySelectorAll(".color-option").forEach(button=>{
+
+button.classList.toggle(
+"selected",
+button.dataset.color===color
+);
+
+});
+
+document.getElementById("previewColor").style.background=color;
+
+document.documentElement.style.setProperty(
+"--primary",
+color
+);
+
+document.documentElement.style.setProperty(
+"--primary2",
+color
+);
+
+}
+
+function updateBrandingPreview(){
+
+const name=
+document.getElementById("storeName").value.trim()
+||"Nama Toko";
+
+document.getElementById("previewStoreName").textContent=name;
+
+document.getElementById("previewColor").style.background=
+selectedStoreColor;
+
+}
+
+function renderLogoPreview(url){
+
+const logoPreview=document.getElementById("logoPreview");
+
+const previewLogo=document.getElementById("previewLogo");
+
+if(url){
+
+logoPreview.innerHTML=
+`<img src="${escapeHTML(url)}" alt="Logo toko">`;
+
+previewLogo.innerHTML=
+`<img src="${escapeHTML(url)}" alt="Logo toko">`;
+
+}else{
+
+logoPreview.innerHTML="🏪";
+
+previewLogo.innerHTML="🏪";
+
+}
+
+}
+
+async function loadStoreSettings(){
+
+const {data,error}=await sb
+
+.from("store_profiles")
+
+.select("*")
+
+.eq("owner_id",currentUser.id)
+
+.maybeSingle();
+
+if(error){
+
+console.error("Profile error:",error.message);
+
+return;
+
+}
+
+storeProfile=data;
+
+if(!storeProfile){
+
+const {data:newProfile,error:createError}=await sb
+
+.from("store_profiles")
+
+.insert({
+
+owner_id:currentUser.id,
+
+store_name:currentBusiness.business_name,
+
+store_color:"#6366f1"
+
+})
+
+.select()
+
+.single();
+
+if(createError){
+
+console.error(createError.message);
+
+return;
+
+}
+
+storeProfile=newProfile;
+
+}
+
+document.getElementById("storeName").value=
+storeProfile.store_name||currentBusiness.business_name||"";
+
+document.getElementById("storeAddress").value=
+storeProfile.store_address||"";
+
+document.getElementById("storePhone").value=
+storeProfile.store_phone||"";
+
+selectedStoreColor=
+storeProfile.store_color||"#6366f1";
+
+document.getElementById("customColor").value=
+selectedStoreColor;
+
+selectStoreColor(selectedStoreColor);
+
+renderLogoPreview(storeProfile.store_logo);
+
+applyStoreBranding();
+
+updateBrandingPreview();
+
+}
+
+async function saveStoreSettings(){
+
+const storeName=
+document.getElementById("storeName").value.trim();
+
+const storeAddress=
+document.getElementById("storeAddress").value.trim();
+
+const storePhone=
+document.getElementById("storePhone").value.trim();
+
+if(!storeName){
+
+return showMessage(
+"settingsMessage",
+"Nama toko tidak boleh kosong."
+);
+
+}
+
+showMessage("settingsMessage","Menyimpan pengaturan...");
+
+let logoUrl=storeProfile?.store_logo||null;
+
+if(uploadedLogoFile){
+
+const file=uploadedLogoFile;
+
+const extension=
+file.name.split(".").pop().toLowerCase();
+
+const filePath=
+currentUser.id+
+"/logo-"+Date.now()+"."+extension;
+
+const {error:uploadError}=await sb.storage
+
+.from("store-logos")
+
+.upload(filePath,file,{
+
+cacheControl:"3600",
+
+upsert:true
+
+});
+
+if(uploadError){
+
+return showMessage(
+"settingsMessage",
+"Gagal upload logo: "+uploadError.message
+);
+
+}
+
+const {data:urlData}=sb.storage
+
+.from("store-logos")
+
+.getPublicUrl(filePath);
+
+logoUrl=urlData.publicUrl;
+
+}
+
+const payload={
+
+owner_id:currentUser.id,
+
+store_name:storeName,
+
+store_logo:logoUrl,
+
+store_color:selectedStoreColor,
+
+store_address:storeAddress,
+
+store_phone:storePhone,
+
+updated_at:new Date().toISOString()
+
+};
+
+const {data,error}=await sb
+
+.from("store_profiles")
+
+.upsert(payload,{onConflict:"owner_id"})
+
+.select()
+
+.single();
+
+if(error){
+
+return showMessage(
+"settingsMessage",
+"Gagal menyimpan: "+error.message
+);
+
+}
+
+storeProfile=data;
+
+await sb
+
+.from("businesses")
+
+.update({
+
+business_name:storeName
+
+})
+
+.eq("id",currentBusiness.id);
+
+currentBusiness.business_name=storeName;
+
+uploadedLogoFile=null;
+
+applyStoreBranding();
+
+renderLogoPreview(logoUrl);
+
+updateBrandingPreview();
+
+showMessage(
+"settingsMessage",
+"Pengaturan toko berhasil disimpan! 🎉"
+);
+
+}
+  
 // ============================================
 // HELPERS
 // ============================================
@@ -1085,6 +1702,8 @@ return;
 
 currentBusiness=data[0];
 
+await loadStoreSettings();
+
 showDashboard();
 
 }
@@ -1120,6 +1739,8 @@ return showMessage("setupMessage",error.message);
 
 currentBusiness=data;
 
+await loadStoreSettings();
+
 showDashboard();
 
 }
@@ -1134,13 +1755,23 @@ document.getElementById("setup").classList.add("hidden");
 
 document.getElementById("dashboard").classList.remove("hidden");
 
-document.getElementById("welcome").textContent=currentBusiness.business_name;
-
-document.getElementById("businessLabel").textContent=currentBusiness.business_name;
+applyStoreBranding();
 
 showPage("dashboard");
 
 loadDashboard();
+
+}
+
+// TAMBAHKAN FUNGSI BARU DI BAWAH SINI
+function applyStoreBranding(){
+
+if(!storeProfile) return;
+
+document.documentElement.style.setProperty(
+"--primary",
+storeProfile.store_color || "#6366f1"
+);
 
 }
 
@@ -1715,6 +2346,48 @@ items.map(transactionHTML).join("")
 
 }
 
+  // ============================================
+// SETTINGS EVENTS
+// ============================================
+
+document.getElementById("storeName")
+.addEventListener("input",updateBrandingPreview);
+
+document.getElementById("logoInput")
+.addEventListener("change",function(event){
+
+const file=event.target.files[0];
+
+if(!file)return;
+
+if(!file.type.startsWith("image/")){
+
+alert("File harus berupa gambar.");
+
+this.value="";
+
+return;
+
+}
+
+if(file.size>5*1024*1024){
+
+alert("Ukuran logo maksimal 5 MB.");
+
+this.value="";
+
+return;
+
+}
+
+uploadedLogoFile=file;
+
+const previewUrl=URL.createObjectURL(file);
+
+renderLogoPreview(previewUrl);
+
+});
+  
 // ============================================
 // SESSION CHECK
 // ============================================
