@@ -1542,15 +1542,6 @@ uploadedLogoFile=null;
 
 applyStoreBranding();
 
-renderLogoPreview(logoUrl);
-
-updateBrandingPreview();
-
-showMessage(
-"settingsMessage",
-"Pengaturan toko berhasil disimpan! 🎉"
-);
-
 }
   
 // ============================================
@@ -1754,15 +1745,39 @@ loadDashboard();
 
 }
 
-// TAMBAHKAN FUNGSI BARU DI BAWAH SINI
+  
 function applyStoreBranding(){
 
-if(!storeProfile) return;
+const color=storeProfile?.store_color||"#6366f1";
 
-document.documentElement.style.setProperty(
-"--primary",
-storeProfile.store_color || "#6366f1"
-);
+document.documentElement.style.setProperty("--primary",color);
+document.documentElement.style.setProperty("--primary2",color);
+
+const storeName=
+storeProfile?.store_name||
+currentBusiness?.business_name||
+"Bizora";
+
+const nameElement=document.getElementById("dashboardStoreName");
+if(nameElement) nameElement.textContent=storeName;
+
+const welcome=document.getElementById("welcome");
+if(welcome) welcome.textContent=storeName;
+
+const businessLabel=document.getElementById("businessLabel");
+if(businessLabel) businessLabel.textContent=storeName;
+
+const logo=document.getElementById("dashboardLogo");
+
+if(logo){
+if(storeProfile?.store_logo){
+logo.src=storeProfile.store_logo;
+logo.style.display="block";
+}else{
+logo.removeAttribute("src");
+logo.style.display="none";
+}
+}
 
 }
 
