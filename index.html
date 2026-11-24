@@ -178,6 +178,80 @@ th{color:var(--muted);font-weight:600}td{color:#dbe4f2}
 </div>
 <div class="card"><div class="section-head"><h2>Daftar produk</h2><span class="badge" id="productBadge">0 produk</span></div><div class="table-wrap"><table><thead><tr><th>Nama produk</th><th>Harga</th><th>Stok</th><th>Status</th></tr></thead><tbody id="productTable"></tbody></table></div></div>
 </section>
+  
+<section id="page-cashier" class="page">
+  <div class="page-head">
+    <div>
+      <h1>Kasir</h1>
+      <div class="subtitle">Pilih produk dan proses pembayaran pelanggan.</div>
+    </div>
+  </div>
+
+  <div class="pos-layout">
+    <div class="card">
+      <div class="section-head">
+        <h2>Pilih produk</h2>
+        <span class="badge" id="posProductCount">0 produk</span>
+      </div>
+      <input id="posSearch" placeholder="Cari nama produk..." oninput="renderPOSProducts()">
+      <div style="height:14px"></div>
+      <div class="pos-products" id="posProducts"></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head">
+        <h2>Keranjang</h2>
+        <button class="btn ghost small" onclick="clearCart()">Kosongkan</button>
+      </div>
+
+      <div id="posCart">
+        <div class="empty">Belum ada produk dipilih.</div>
+      </div>
+
+      <div style="border-top:1px solid var(--border);margin-top:15px;padding-top:12px">
+        <div class="pos-total">
+          <span>Subtotal</span>
+          <strong id="posSubtotal">Rp0</strong>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <label>Diskon (Rp)</label>
+          <input id="posDiscount" type="number" min="0" value="0" oninput="renderCart()">
+        </div>
+
+        <div class="pos-total final">
+          <span>Total</span>
+          <strong id="posTotal">Rp0</strong>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <label>Metode pembayaran</label>
+          <select id="posPayment">
+            <option value="Tunai">Tunai</option>
+            <option value="Transfer">Transfer</option>
+            <option value="QRIS">QRIS</option>
+            <option value="Debit">Kartu debit</option>
+          </select>
+        </div>
+
+        <div class="field" style="margin-top:12px">
+          <label>Uang diterima (Rp)</label>
+          <input id="posPaid" type="number" min="0" placeholder="Masukkan nominal" oninput="renderCart()">
+        </div>
+
+        <div class="pos-total">
+          <span>Kembalian</span>
+          <strong id="posChange">Rp0</strong>
+        </div>
+
+        <button class="btn" style="width:100%;margin-top:15px" onclick="checkout()">
+          Proses Pembayaran
+        </button>
+        <div id="posMessage" class="message"></div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <section id="page-transactions" class="page">
 <div class="page-head"><div><h1>Transaksi</h1><div class="subtitle">Catat pemasukan dan pengeluaran.</div></div></div>
@@ -269,8 +343,10 @@ let cache={transactions:[],expenses:[],products:[]};
 // ============================================
 // NAVIGATION
 // ============================================
+
 const navItems=[
 {id:"dashboard",icon:"⌂",label:"Dashboard"},
+{id:"cashier",icon:"🛒",label:"Kasir"},
 {id:"products",icon:"▦",label:"Produk"},
 {id:"transactions",icon:"↔",label:"Transaksi"},
 {id:"reports",icon:"▤",label:"Laporan"},
@@ -295,6 +371,7 @@ document.querySelectorAll(".nav-item").forEach(button=>{
 button.classList.toggle("active",button.dataset.page===id);
 });
 if(id==="reports")renderReport();
+  if(id==="cashier")renderPOS();
 window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -598,6 +675,7 @@ renderRecent();
 renderLowStock();
 renderChart();
 renderReport();
+renderPOS();
 }
 
 // ============================================
@@ -614,6 +692,196 @@ document.getElementById("expenses").textContent=formatRupiah(totalExpenses);
 document.getElementById("profit").textContent=formatRupiah(totalSales-totalExpenses);
 document.getElementById("productCount").textContent=cache.products.length;
 document.getElementById("stockFoot").textContent=totalStock+" unit stok";
+}
+
+// ============================================
+// BIZORA POS / KASIR
+// ============================================
+let posCart=[];
+
+function renderPOS(){
+  renderPOSProducts();
+  renderCart();
+}
+
+function renderPOSProducts(){
+  const search=(document.getElementById("posSearch")?.value||"").toLowerCase();
+  const products=cache.products.filter(p=>
+    String(p.name||"").toLowerCase().includes(search)
+  );
+
+  document.getElementById("posProductCount").textContent=products.length+" produk";
+
+  document.getElementById("posProducts").innerHTML=products.length?
+    products.map(p=>`
+      <button class="pos-product" onclick="addToCart('${p.id}')"
+        ${Number(p.stock)<=0?'disabled style="opacity:.45"':''}>
+        ${p.image_url?`<img src="${escapeHTML(p.image_url)}" alt="">`:
+          `<div style="height:100px;display:grid;place-items:center;font-size:35px">📦</div>`}
+        <div class="pos-product-name">${escapeHTML(p.name)}</div>
+        <div class="pos-product-price">${formatRupiah(p.price)}</div>
+        <div class="pos-product-stock">Stok: ${Number(p.stock||0)}</div>
+      </button>
+    `).join("")
+    :'<div class="empty">Produk tidak ditemukan.</div>';
+}
+
+function addToCart(id){
+  const product=cache.products.find(p=>String(p.id)===String(id));
+  if(!product)return;
+
+  const existing=posCart.find(item=>String(item.id)===String(id));
+  const quantity=existing?existing.quantity:0;
+
+  if(quantity+1>Number(product.stock||0)){
+    return showMessage("posMessage","Stok produk tidak mencukupi.");
+  }
+
+  if(existing)existing.quantity++;
+  else posCart.push({id:product.id,quantity:1});
+
+  showMessage("posMessage","");
+  renderCart();
+}
+
+function changeCartQuantity(id,change){
+  const item=posCart.find(p=>String(p.id)===String(id));
+  const product=cache.products.find(p=>String(p.id)===String(id));
+  if(!item||!product)return;
+
+  const next=item.quantity+change;
+
+  if(next<=0){
+    posCart=posCart.filter(p=>String(p.id)!==String(id));
+  }else if(next>Number(product.stock||0)){
+    return showMessage("posMessage","Stok produk tidak mencukupi.");
+  }else{
+    item.quantity=next;
+  }
+
+  renderCart();
+}
+
+function clearCart(){
+  posCart=[];
+  document.getElementById("posDiscount").value=0;
+  document.getElementById("posPaid").value="";
+  showMessage("posMessage","");
+  renderCart();
+}
+
+function getCartTotals(){
+  const subtotal=posCart.reduce((sum,item)=>{
+    const product=cache.products.find(p=>String(p.id)===String(item.id));
+    return sum+(Number(product?.price||0)*item.quantity);
+  },0);
+
+  const discount=Math.max(0,Number(document.getElementById("posDiscount").value)||0);
+  const total=Math.max(0,subtotal-discount);
+  const paid=Math.max(0,Number(document.getElementById("posPaid").value)||0);
+  const change=Math.max(0,paid-total);
+
+  return {subtotal,discount,total,paid,change};
+}
+
+function renderCart(){
+  const container=document.getElementById("posCart");
+
+  container.innerHTML=posCart.length?
+    posCart.map(item=>{
+      const product=cache.products.find(p=>String(p.id)===String(item.id));
+      if(!product)return "";
+
+      return `
+        <div class="pos-cart-item">
+          <div style="min-width:0">
+            <div class="tx-title">${escapeHTML(product.name)}</div>
+            <div class="tx-date">${formatRupiah(product.price)} / produk</div>
+            <div style="font-weight:700;margin-top:5px">${formatRupiah(product.price*item.quantity)}</div>
+          </div>
+          <div class="pos-qty">
+            <button onclick="changeCartQuantity('${item.id}',-1)">−</button>
+            <strong>${item.quantity}</strong>
+            <button onclick="changeCartQuantity('${item.id}',1)">+</button>
+          </div>
+        </div>`;
+    }).join("")
+    :'<div class="empty">Belum ada produk dipilih.</div>';
+
+  const totals=getCartTotals();
+
+  document.getElementById("posSubtotal").textContent=formatRupiah(totals.subtotal);
+  document.getElementById("posTotal").textContent=formatRupiah(totals.total);
+  document.getElementById("posChange").textContent=formatRupiah(totals.change);
+}
+
+async function checkout(){
+  if(!currentBusiness||!currentUser){
+    return showMessage("posMessage","Sesi tidak ditemukan. Silakan login ulang.");
+  }
+
+  if(posCart.length===0){
+    return showMessage("posMessage","Keranjang masih kosong.");
+  }
+
+  const totals=getCartTotals();
+
+  if(totals.discount>totals.subtotal){
+    return showMessage("posMessage","Diskon tidak boleh melebihi subtotal.");
+  }
+
+  if(totals.paid<totals.total){
+    return showMessage("posMessage","Uang pembayaran belum mencukupi.");
+  }
+
+  const payment=document.getElementById("posPayment").value;
+  const items=posCart.map(item=>({
+    id:item.id,
+    quantity:item.quantity
+  }));
+
+  const button=document.querySelector('#page-cashier button[onclick="checkout()"]');
+  button.disabled=true;
+  button.textContent="Memproses...";
+
+  showMessage("posMessage","Sedang menyimpan transaksi...");
+
+  try{
+    const {data,error}=await sb.rpc("bizora_checkout",{
+      p_business_id:currentBusiness.id,
+      p_items:items,
+      p_discount:totals.discount,
+      p_paid_amount:totals.paid,
+      p_payment_method:payment
+    });
+
+    if(error)throw error;
+    if(!data||!data.success)throw new Error("Transaksi belum berhasil.");
+
+    posCart=[];
+    document.getElementById("posDiscount").value=0;
+    document.getElementById("posPaid").value="";
+    showMessage("posMessage","Pembayaran berhasil!");
+
+    await loadDashboard();
+    renderPOS();
+
+    alert(
+      "TRANSAKSI BERHASIL!\n\n"+
+      "Subtotal: "+formatRupiah(data.subtotal)+"\n"+
+      "Diskon: "+formatRupiah(data.discount)+"\n"+
+      "Total: "+formatRupiah(data.total)+"\n"+
+      "Dibayar: "+formatRupiah(data.paid_amount)+"\n"+
+      "Kembalian: "+formatRupiah(data.change_amount)
+    );
+
+  }catch(error){
+    console.error("Checkout error:",error);
+    showMessage("posMessage","Checkout gagal: "+error.message);
+  }finally{
+    button.disabled=false;
+    button.textContent="Proses Pembayaran";
+  }
 }
 
 // ============================================
@@ -880,6 +1148,68 @@ if(!document.getElementById("dashboard").classList.contains("hidden")){
 renderChart();
 }
 });
+
+  
+/* =========================================
+   BIZORA POS / KASIR
+========================================= */
+.pos-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1.4fr) minmax(280px,.8fr);
+  gap:16px;
+}
+.pos-products{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:12px;
+}
+.pos-product{
+  background:#0d1525;
+  border:1px solid var(--border);
+  border-radius:13px;
+  padding:12px;
+  color:var(--text);
+  text-align:left;
+  min-width:0;
+}
+.pos-product:hover{border-color:var(--primary)}
+.pos-product img{
+  width:100%;
+  height:100px;
+  object-fit:cover;
+  border-radius:9px;
+  margin-bottom:9px;
+}
+.pos-product-name{font-weight:700;font-size:13px}
+.pos-product-price{color:var(--green);font-weight:700;margin-top:7px;font-size:13px}
+.pos-product-stock{font-size:11px;color:var(--muted);margin-top:5px}
+.pos-cart-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:13px 0;
+  border-bottom:1px solid var(--border);
+}
+.pos-qty{display:flex;align-items:center;gap:8px}
+.pos-qty button{
+  width:29px;height:29px;border:0;border-radius:8px;
+  background:#29364d;color:white;font-weight:800;
+}
+.pos-total{
+  display:flex;justify-content:space-between;
+  padding:9px 0;font-size:13px;
+}
+.pos-total.final{
+  border-top:1px solid var(--border);
+  margin-top:8px;padding-top:15px;
+  font-size:19px;font-weight:800;
+}
+@media(max-width:850px){
+  .pos-layout{grid-template-columns:1fr}
+  .pos-products{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+
 </script>
 </body>
 </html>
