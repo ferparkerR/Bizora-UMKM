@@ -200,6 +200,93 @@ th{color:var(--muted);font-weight:600}td{color:#dbe4f2}
   .pos-products{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 
+/* =========================
+   STRUK TOKO BIZORA
+========================= */
+
+#receiptArea {
+  max-width: 420px;
+  margin: 20px auto;
+  background: #fff;
+  color: #111;
+  border-radius: 12px;
+  padding: 22px;
+  font-family: monospace;
+}
+
+.receipt-center {
+  text-align: center;
+}
+
+.receipt-line {
+  border-top: 1px dashed #777;
+  margin: 12px 0;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 7px 0;
+  font-size: 13px;
+}
+
+.receipt-item {
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.receipt-muted {
+  font-size: 11px;
+  color: #555;
+}
+
+.receipt-total {
+  font-weight: 800;
+  font-size: 17px;
+}
+
+.receipt-thanks {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 12px;
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #receiptArea,
+  #receiptArea * {
+    visibility: visible !important;
+  }
+
+  #receiptArea {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1381,93 +1468,6 @@ if(!document.getElementById("dashboard").classList.contains("hidden")){
 renderChart();
 }
 });
-
-/* =========================
-   STRUK TOKO BIZORA
-========================= */
-
-#receiptArea {
-  max-width: 420px;
-  margin: 20px auto;
-  background: #fff;
-  color: #111;
-  border-radius: 12px;
-  padding: 22px;
-  font-family: monospace;
-}
-
-.receipt-center {
-  text-align: center;
-}
-
-.receipt-line {
-  border-top: 1px dashed #777;
-  margin: 12px 0;
-}
-
-.receipt-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  margin: 7px 0;
-  font-size: 13px;
-}
-
-.receipt-item {
-  margin: 12px 0;
-  font-size: 13px;
-}
-
-.receipt-muted {
-  font-size: 11px;
-  color: #555;
-}
-
-.receipt-total {
-  font-weight: 800;
-  font-size: 17px;
-}
-
-.receipt-thanks {
-  text-align: center;
-  margin-top: 20px;
-  font-size: 12px;
-}
-
-@media print {
-  @page {
-    size: 80mm auto;
-    margin: 4mm;
-  }
-
-  body * {
-    visibility: hidden !important;
-  }
-
-  #receiptArea,
-  #receiptArea * {
-    visibility: visible !important;
-  }
-
-  #receiptArea {
-    display: block !important;
-    position: absolute !important;
-    left: 0 !important;
-    top: 0 !important;
-    width: 100% !important;
-    max-width: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: 0 !important;
-    box-shadow: none !important;
-    background: white !important;
-    color: black !important;
-  }
-
-  .no-print {
-    display: none !important;
-  }
-}
 
 </script>
 </body>
