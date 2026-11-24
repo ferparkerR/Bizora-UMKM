@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -498,7 +497,8 @@ body.dark-mode .backup-warning p{color:#f5d58c}
     <button id="themeToggle" class="theme-toggle" type="button"><span id="themeLabel">Mode Gelap</span></button>
     <div class="avatar" id="userAvatar">B</div>
   </div>
-</header>
+
+  </header>
 
 <div class="content">
 
@@ -1305,7 +1305,7 @@ sb.auth.onAuthStateChange((event, session) => {
   }
 })();
 
-// ==========================================
+  // ==========================================
 // STORE PROFILE
 // ==========================================
 async function loadStoreProfile() {
@@ -1723,7 +1723,7 @@ async function deleteCategory(index) {
   }
 }
 
-  // ==========================================
+// ==========================================
 // PRODUCTS
 // ==========================================
 async function loadProducts() {
@@ -1949,7 +1949,7 @@ async function deleteProduct(id) {
   }
 }
 
-function renderProducts() {
+  function renderProducts() {
   const body = $("productsTable");
   if (!body) return;
 
@@ -2289,7 +2289,7 @@ async function checkout() {
   }
 }
 
-  // ==========================================
+// ==========================================
 // TRANSACTIONS
 // ==========================================
 async function loadTransactions() {
@@ -2530,7 +2530,7 @@ function renderExpenses() {
   safeText("expenseCount", expenses.length);
 }
 
-// ==========================================
+  // ==========================================
 // BEST SELLER
 // ==========================================
 function renderBestSeller() {
@@ -3114,22 +3114,21 @@ function doPrintReceipt() {
   window.print();
 }
 
-  // ==========================================
+// ==========================================
 // DASHBOARD
 // ==========================================
 function renderDashboard() {
   const today = todayString();
 
-  
-const todayTransactions = transactions.filter(t =>
-  String(transactionDate(t) || "").slice(0, 10) === today &&
-  (!t.type || t.type === "sale")
-);
+  const todayTransactions = transactions.filter(t =>
+    String(transactionDate(t) || "").slice(0, 10) === today &&
+    (!t.type || t.type === "sale")
+  );
 
-const todaySales = todayTransactions.reduce(
-  (sum, t) => sum + transactionTotal(t),
-  0
-);
+  const todaySales = todayTransactions.reduce(
+    (sum, t) => sum + transactionTotal(t),
+    0
+  );
 
   const todayExpenses = expenses
     .filter(x =>
@@ -3212,737 +3211,383 @@ function renderAll() {
   renderReceiptPreview();
 }
 
+  // ==========================================
+// BIZORA AI PREMIUM
+// GEMINI VIA SUPABASE EDGE FUNCTION
+// INLINE ASSISTANT PANEL
 // ==========================================
-// MODAL OUTSIDE CLICK
-// ==========================================
-document.querySelectorAll(".modal-backdrop").forEach(backdrop => {
-  backdrop.addEventListener("click", e => {
-    if (e.target === backdrop) {
-      backdrop.classList.remove("show");
-    }
-  });
-});
+(function initBizoraPremiumAI() {
+  // Hapus widget AI mengambang versi lama.
+  document.getElementById("bizora-ai-host")?.remove();
 
-// ==========================================
-// KEYBOARD / MOBILE SAFETY
-// ==========================================
-document.addEventListener("keydown", e => {
-  if (e.key === "Escape") {
-    document.querySelectorAll(".modal-backdrop.show").forEach(modal => {
-      modal.classList.remove("show");
-    });
+  // Hindari pemasangan event dan panel ganda.
+  if (document.getElementById("bizoraPremiumPanel")) return;
 
-    if (document.body.classList.contains("print-mode")) {
-      closeReceiptPrintView();
-    }
+  const assistantForm = $("assistantForm");
 
-    $("sidebar")?.classList.remove("open");
-    $("mobileOverlay")?.classList.remove("show");
-  }
-});
-
-// ==========================================
-// STARTUP SAFETY
-// ==========================================
-window.addEventListener("error", event => {
-  console.error("Bizora error:", event.message);
-});
-
-window.addEventListener("unhandledrejection", event => {
-  console.error("Bizora async error:", event.reason);
-});
-
-// ==========================================
-// BIZORA DARK / LIGHT MODE
-// ==========================================
-function setBizoraTheme(theme) {
-  const selectedTheme = theme === "dark" ? "dark" : "light";
-
-  document.body.classList.toggle(
-    "dark-mode",
-    selectedTheme === "dark"
-  );
-
-  const label = $("themeLabel");
-
-  if (label) {
-    label.textContent =
-      selectedTheme === "dark" ? "Mode Terang" : "Mode Gelap";
+  if (!assistantForm) {
+    console.warn("Form AI Lokal tidak ditemukan.");
+    return;
   }
 
-  try {
-    localStorage.setItem("bizora_theme", selectedTheme);
-  } catch (error) {
-    console.warn("Gagal menyimpan tema:", error);
-  }
-}
-
-function initializeBizoraTheme() {
-  let savedTheme = "light";
-
-  try {
-    savedTheme = localStorage.getItem("bizora_theme") || "light";
-  } catch (error) {
-    console.warn("Tema lokal tidak dapat dibaca:", error);
-  }
-
-  setBizoraTheme(savedTheme);
-
-  const toggle = $("themeToggle");
-
-  if (toggle && !toggle.dataset.bizoraThemeBound) {
-    toggle.dataset.bizoraThemeBound = "true";
-
-    toggle.addEventListener("click", () => {
-      const isDark = document.body.classList.contains("dark-mode");
-      setBizoraTheme(isDark ? "light" : "dark");
-    });
-  }
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initializeBizoraTheme);
-} else {
-  initializeBizoraTheme();
-}
-
-// ==========================================
-// BIZORA DATA PROTECTION
-// MANUAL BACKUP & VALIDATION
-// ==========================================
-const BIZORA_BACKUP_VERSION = 1;
-
-const BIZORA_BACKUP_TABLES = [
-  "products",
-  "transactions",
-  "expenses",
-  "receipt_settings"
-];
-
-async function bizoraGetBackupUser() {
-  const { data, error } = await sb.auth.getUser();
-
-  if (error) throw error;
-  if (!data.user) {
-    throw new Error("Silakan login terlebih dahulu.");
-  }
-
-  return data.user;
-}
-
-// ==========================================
-// DOWNLOAD BACKUP
-// ==========================================
-async function bizoraDownloadBackup() {
-  const button = $("backupDownloadBtn");
-
-  try {
-    if (!business?.id) {
-      throw new Error("Data bisnis belum siap. Muat ulang aplikasi.");
-    }
-
-    if (button) {
-      button.disabled = true;
-      button.textContent = "Membuat Backup...";
-    }
-
-    const backupUser = await bizoraGetBackupUser();
-
-    const backupData = {
-      app: "Bizora",
-      version: BIZORA_BACKUP_VERSION,
-      created_at: new Date().toISOString(),
-      user_id: backupUser.id,
-      business_id: business.id,
-      tables: {}
-    };
-
-    const backupSummary = {};
-    let totalRecords = 0;
-
-    for (const table of BIZORA_BACKUP_TABLES) {
-      const { data, error } = await sb
-        .from(table)
-        .select("*")
-        .eq("business_id", business.id);
-
-      if (error) {
-        throw new Error(
-          `Gagal mengambil data ${table}: ${error.message}`
-        );
-      }
-
-      const rows = data || [];
-
-      backupData.tables[table] = rows;
-      backupSummary[table] = rows.length;
-      totalRecords += rows.length;
-    }
-
-    const jsonData = JSON.stringify(backupData, null, 2);
-
-    const file = new Blob(
-      [jsonData],
-      { type: "application/json" }
-    );
-
-    if (!file.size) {
-      throw new Error("File backup kosong.");
-    }
-
-    const url = URL.createObjectURL(file);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download =
-      `bizora-backup-${todayString()}.json`;
-
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-
-    const date = new Date().toLocaleString("id-ID");
-
-    try {
-      localStorage.setItem("bizora_last_backup", date);
-
-      localStorage.setItem(
-        "bizora_backup_summary",
-        JSON.stringify({
-          created_at: backupData.created_at,
-          total_records: totalRecords,
-          tables: backupSummary,
-          file_size: file.size
-        })
-      );
-    } catch (storageError) {
-      console.warn("Metadata backup tidak tersimpan:", storageError);
-    }
-
-    safeText("backupLastDate", date);
-
-    const summaryText = Object.entries(backupSummary)
-      .map(([table, count]) => `${table}: ${count} data`)
-      .join("\n");
-
-    alert(
-      "BACKUP BIZORA BERHASIL!\n\n" +
-      summaryText +
-      "\n\nTotal data: " + totalRecords +
-      "\nUkuran file: " + (file.size / 1024).toFixed(2) + " KB" +
-      "\nWaktu: " + date
-    );
-
-    showToast("Backup berhasil dibuat.");
-
-  } catch (error) {
-    console.error("Bizora backup error:", error);
-    alert("Backup gagal: " + error.message);
-  } finally {
-    if (button) {
-      button.disabled = false;
-      button.textContent = "Download Backup";
-    }
-  }
-}
-
-// ==========================================
-// RESTORE BACKUP — VALIDATION ONLY
-// Belum menulis data ke database.
-// ==========================================
-async function bizoraRestoreBackup(file) {
-  if (!file) return;
-
-  try {
-    const backupUser = await bizoraGetBackupUser();
-
-    if (!file.name.toLowerCase().endsWith(".json")) {
-      throw new Error("File harus berformat JSON.");
-    }
-
-    const raw = await file.text();
-
-    if (!raw.trim()) {
-      throw new Error("File backup kosong.");
-    }
-
-    let backup;
-
-    try {
-      backup = JSON.parse(raw);
-    } catch {
-      throw new Error("File backup rusak atau format JSON tidak valid.");
-    }
-
-    if (backup.app !== "Bizora") {
-      throw new Error("File ini bukan backup Bizora.");
-    }
-
-    if (backup.version !== BIZORA_BACKUP_VERSION) {
-      throw new Error("Versi backup tidak kompatibel.");
-    }
-
-    if (backup.user_id !== backupUser.id) {
-      throw new Error("Backup bukan milik akun Bizora ini.");
-    }
-
-    if (backup.business_id !== business?.id) {
-      throw new Error("Backup bukan milik toko yang sedang dibuka.");
-    }
-
-    if (!backup.tables || typeof backup.tables !== "object") {
-      throw new Error("Struktur data backup tidak valid.");
-    }
-
-    const missingTables = [];
-    const invalidTables = [];
-    const summary = {};
-    let totalRecords = 0;
-
-    for (const table of BIZORA_BACKUP_TABLES) {
-      if (!(table in backup.tables)) {
-        missingTables.push(table);
-        continue;
-      }
-
-      if (!Array.isArray(backup.tables[table])) {
-        invalidTables.push(table);
-        continue;
-      }
-
-      summary[table] = backup.tables[table].length;
-      totalRecords += backup.tables[table].length;
-    }
-
-    if (missingTables.length) {
-      throw new Error(
-        "Tabel tidak ditemukan dalam backup: " +
-        missingTables.join(", ")
-      );
-    }
-
-    if (invalidTables.length) {
-      throw new Error(
-        "Format data tabel tidak valid: " +
-        invalidTables.join(", ")
-      );
-    }
-
-    const summaryText = Object.entries(summary)
-      .map(([table, count]) => `${table}: ${count} data`)
-      .join("\n");
-
-    const confirmed = confirm(
-      "BACKUP BIZORA TERVERIFIKASI\n\n" +
-      "Nama file: " + file.name +
-      "\nVersi: " + backup.version +
-      "\nDibuat: " + new Date(backup.created_at).toLocaleString("id-ID") +
-      "\n\n" + summaryText +
-      "\n\nTotal data: " + totalRecords +
-      "\n\nFile lolos pemeriksaan struktur dan akun.\n" +
-      "Database belum diubah.\n\n" +
-      "Lanjutkan pemeriksaan?"
-    );
-
-    if (!confirmed) return;
-
-    alert(
-      "Pemeriksaan backup berhasil!\n\n" +
-      "File sesuai dengan akun dan toko ini.\n" +
-      "Data database belum diubah.\n\n" +
-      "Pemulihan penuh belum diaktifkan agar data lama tidak tertimpa atau rusak."
-    );
-
-  } catch (error) {
-    console.error("Bizora Restore Validation:", error);
-    alert("Pemeriksaan backup gagal: " + error.message);
-  }
-}
-
-// ==========================================
-// BACKUP BUTTON CONNECTION
-// ==========================================
-function initializeBackupButtons() {
-  const downloadButton = $("backupDownloadBtn");
-
-  if (downloadButton && !downloadButton.dataset.bizoraBackupBound) {
-    downloadButton.dataset.bizoraBackupBound = "true";
-
-    downloadButton.addEventListener("click", bizoraDownloadBackup);
-  }
-
-  // Mendukung beberapa kemungkinan ID input file restore.
-  const restoreInput =
-    $("backupRestoreInput") ||
-    $("backupFileInput") ||
-    $("restoreBackupFile");
-
-  if (restoreInput && !restoreInput.dataset.bizoraRestoreBound) {
-    restoreInput.dataset.bizoraRestoreBound = "true";
-
-    restoreInput.addEventListener("change", async e => {
-      const file = e.target.files?.[0];
-
-      if (file) {
-        await bizoraRestoreBackup(file);
-      }
-
-      e.target.value = "";
-    });
-  }
-
-  try {
-    safeText(
-      "backupLastDate",
-      localStorage.getItem("bizora_last_backup") || "Belum pernah backup"
-    );
-  } catch (error) {
-    console.warn(error);
-  }
-}
-
-if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initializeBackupButtons);
-} else {
-  initializeBackupButtons();
-}
-  
-
-/* =========================================
-   BIZORA AI CHAT
-   Gemini API melalui Supabase Edge Function
-   FIXED VERSION
-========================================= */
-
-(function initBizoraAI() {
-  if (document.getElementById("bizora-ai-host")) return;
-
-  const host = document.createElement("div");
-  host.id = "bizora-ai-host";
-  document.body.appendChild(host);
-
-  const root = host.attachShadow({ mode: "open" });
-
-  root.innerHTML = `
+  // Tempatkan panel Premium setelah area AI Lokal.
+  const anchor =
+    assistantForm.closest(".card") ||
+    assistantForm.parentElement;
+
+  if (!anchor?.parentElement) return;
+
+  const panel = document.createElement("section");
+  panel.id = "bizoraPremiumPanel";
+
+  panel.style.cssText = `
+    margin-top:20px;
+    padding:22px;
+    border:1px solid var(--border,#e5e7eb);
+    border-radius:18px;
+    background:var(--card-bg,#fff);
+    color:var(--text,#172033);
+    box-shadow:0 8px 28px rgba(15,23,42,.05);
+    width:100%;
+    min-width:0;
+  `;
+
+  panel.innerHTML = `
     <style>
-      * {
-        box-sizing: border-box;
+      #bizoraPremiumPanel * {
+        box-sizing:border-box;
       }
 
-      .ai-launcher {
-        position: fixed;
-        right: 22px;
-        bottom: 22px;
-        z-index: 99998;
-        width: 58px;
-        height: 58px;
-        border: none;
-        border-radius: 19px;
-        background: linear-gradient(135deg,#2563eb,#4f46e5);
-        color: white;
-        font-size: 25px;
-        cursor: pointer;
-        box-shadow: 0 8px 30px #2563eb55;
+      #bizoraPremiumPanel .premium-head {
+        display:flex;
+        align-items:center;
+        gap:13px;
+        margin-bottom:17px;
       }
 
-      .ai-panel {
-        position: fixed;
-        right: 22px;
-        bottom: 92px;
-        z-index: 99999;
-        width: 380px;
-        max-width: calc(100vw - 28px);
-        height: 540px;
-        max-height: calc(100dvh - 120px);
-        background: var(--ai-bg,#ffffff);
-        color: var(--ai-text,#172033);
-        border: 1px solid var(--ai-border,#e5e7eb);
-        border-radius: 20px;
-        box-shadow: 0 18px 60px #0002;
-        display: none;
-        flex-direction: column;
-        overflow: hidden;
-        font-family: inherit;
+      #bizoraPremiumPanel .premium-icon {
+        width:44px;
+        height:44px;
+        display:grid;
+        place-items:center;
+        border-radius:14px;
+        color:#fff;
+        font-size:21px;
+        background:linear-gradient(135deg,#2563eb,#7c3aed);
+        flex-shrink:0;
       }
 
-      .ai-panel.open {
-        display: flex;
-        animation: aiEnter .2s ease;
+      #bizoraPremiumPanel .premium-title {
+        font-size:16px;
+        font-weight:750;
+        margin:0;
       }
 
-      @keyframes aiEnter {
-        from {
-          opacity: 0;
-          transform: translateY(10px);
-        }
-        to {
-          opacity: 1;
-          transform: translateY(0);
-        }
+      #bizoraPremiumPanel .premium-subtitle {
+        font-size:12px;
+        opacity:.65;
+        margin-top:4px;
       }
 
-      .ai-header {
-        padding: 16px;
-        display: flex;
-        align-items: center;
-        gap: 11px;
-        border-bottom: 1px solid var(--ai-border,#e5e7eb);
+      #bizoraPremiumPanel .premium-badge {
+        margin-left:auto;
+        padding:5px 9px;
+        border-radius:20px;
+        background:#eef2ff;
+        color:#4338ca;
+        font-size:10px;
+        font-weight:700;
+        white-space:nowrap;
       }
 
-      .ai-logo {
-        width: 42px;
-        height: 42px;
-        border-radius: 13px;
-        display: grid;
-        place-items: center;
-        background: linear-gradient(135deg,#2563eb,#6366f1);
-        color: white;
-        font-size: 21px;
+      #bizoraPremiumPanel .premium-messages {
+        min-height:180px;
+        max-height:360px;
+        overflow-y:auto;
+        padding:13px;
+        border-radius:13px;
+        background:var(--input-bg,#f8fafc);
+        display:flex;
+        flex-direction:column;
+        gap:11px;
       }
 
-      .ai-heading {
-        flex: 1;
-        min-width: 0;
+      #bizoraPremiumPanel .premium-message {
+        max-width:88%;
+        padding:11px 13px;
+        border-radius:13px;
+        font-size:13px;
+        line-height:1.65;
+        white-space:pre-wrap;
+        overflow-wrap:anywhere;
       }
 
-      .ai-heading strong {
-        display: block;
-        font-size: 15px;
+      #bizoraPremiumPanel .premium-message.bot {
+        align-self:flex-start;
+        background:var(--card-bg,#fff);
+        border:1px solid var(--border,#e5e7eb);
       }
 
-      .ai-status {
-        font-size: 11px;
-        color: #16a34a;
-        margin-top: 3px;
+      #bizoraPremiumPanel .premium-message.user {
+        align-self:flex-end;
+        color:#fff;
+        background:#2563eb;
       }
 
-      .ai-close {
-        border: none;
-        background: transparent;
-        color: var(--ai-text,#172033);
-        font-size: 22px;
-        cursor: pointer;
+      #bizoraPremiumPanel .premium-suggestions {
+        display:flex;
+        gap:7px;
+        overflow-x:auto;
+        padding:12px 0;
       }
 
-      .ai-messages {
-        flex: 1;
-        overflow-y: auto;
-        padding: 15px;
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
+      #bizoraPremiumPanel .premium-suggestions button {
+        border:1px solid var(--border,#e5e7eb);
+        border-radius:20px;
+        padding:8px 11px;
+        background:transparent;
+        color:inherit;
+        font-size:11px;
+        white-space:nowrap;
+        cursor:pointer;
       }
 
-      .ai-message {
-        max-width: 88%;
-        padding: 11px 13px;
-        border-radius: 14px;
-        font-size: 13px;
-        line-height: 1.65;
-        white-space: pre-wrap;
-        overflow-wrap: anywhere;
+      #bizoraPremiumPanel .premium-input-row {
+        display:flex;
+        gap:9px;
+        align-items:center;
       }
 
-      .ai-message.bot {
-        align-self: flex-start;
-        background: var(--ai-bubble,#f1f5f9);
-        color: var(--ai-text,#172033);
-        border-bottom-left-radius: 4px;
+      #bizoraPremiumPanel .premium-input {
+        flex:1;
+        min-width:0;
+        height:46px;
+        border:1px solid var(--border,#e5e7eb);
+        border-radius:12px;
+        padding:0 13px;
+        background:var(--card-bg,#fff);
+        color:inherit;
+        font-size:13px;
+        outline:none;
       }
 
-      .ai-message.user {
-        align-self: flex-end;
-        background: #2563eb;
-        color: white;
-        border-bottom-right-radius: 4px;
+      #bizoraPremiumPanel .premium-input:focus {
+        border-color:#3b82f6;
       }
 
-      .ai-typing {
-        font-size: 12px;
-        color: #64748b;
-        padding: 4px 8px;
+      #bizoraPremiumPanel .premium-send {
+        width:46px;
+        height:46px;
+        border:0;
+        border-radius:12px;
+        color:#fff;
+        background:#2563eb;
+        font-size:19px;
+        cursor:pointer;
       }
 
-      .ai-suggestions {
-        display: flex;
-        gap: 7px;
-        overflow-x: auto;
-        padding: 0 13px 11px;
+      #bizoraPremiumPanel .premium-send:disabled {
+        opacity:.5;
+        cursor:not-allowed;
       }
 
-      .ai-suggestions button {
-        white-space: nowrap;
-        border: 1px solid var(--ai-border,#e5e7eb);
-        border-radius: 20px;
-        padding: 7px 10px;
-        background: transparent;
-        color: var(--ai-text,#172033);
-        font-size: 11px;
-        cursor: pointer;
+      #bizoraPremiumPanel .premium-note {
+        font-size:10px;
+        opacity:.6;
+        text-align:center;
+        margin-top:11px;
+        line-height:1.5;
       }
 
-      .ai-input-area {
-        padding: 12px;
-        border-top: 1px solid var(--ai-border,#e5e7eb);
+      #bizoraPremiumPanel .premium-locked {
+        padding:25px 15px;
+        border:1px dashed var(--border,#cbd5e1);
+        border-radius:14px;
+        text-align:center;
       }
 
-      .ai-input-row {
-        display: flex;
-        gap: 8px;
-        align-items: center;
+      #bizoraPremiumPanel .premium-locked strong {
+        display:block;
+        margin-bottom:8px;
+        font-size:15px;
       }
 
-      .ai-input {
-        flex: 1;
-        min-width: 0;
-        height: 43px;
-        border: 1px solid var(--ai-border,#e5e7eb);
-        border-radius: 12px;
-        padding: 0 12px;
-        background: var(--ai-input,#fff);
-        color: var(--ai-text,#172033);
-        outline: none;
-        font-size: 13px;
-      }
-
-      .ai-input:focus {
-        border-color: #3b82f6;
-      }
-
-      .ai-send {
-        width: 43px;
-        height: 43px;
-        border: none;
-        border-radius: 12px;
-        background: #2563eb;
-        color: white;
-        cursor: pointer;
-        font-size: 18px;
-      }
-
-      .ai-send:disabled {
-        opacity: .5;
-        cursor: not-allowed;
-      }
-
-      .ai-footer {
-        text-align: center;
-        font-size: 10px;
-        color: #94a3b8;
-        margin-top: 8px;
-      }
-
-      @media(max-width:480px) {
-        .ai-panel {
-          right: 10px;
-          bottom: 82px;
-          width: calc(100vw - 20px);
-          height: min(600px,calc(100dvh - 105px));
-          max-height: none;
-        }
-
-        .ai-launcher {
-          right: 16px;
-          bottom: 16px;
-        }
+      #bizoraPremiumPanel .premium-locked p {
+        font-size:12px;
+        opacity:.7;
+        line-height:1.6;
+        margin:0;
       }
     </style>
 
-    <button class="ai-launcher" aria-label="Buka Bizora AI">
-      ✦
-    </button>
+    <div class="premium-head">
+      <div class="premium-icon">✦</div>
+      <div style="min-width:0">
+        <h3 class="premium-title">Bizora AI Premium</h3>
+        <div class="premium-subtitle">Business assistant powered by Gemini</div>
+      </div>
+      <span class="premium-badge" id="bizoraPremiumBadge">PREMIUM</span>
+    </div>
 
-    <section class="ai-panel">
-      <header class="ai-header">
-        <div class="ai-logo">✦</div>
-        <div class="ai-heading">
-          <strong>Bizora AI</strong>
-          <div class="ai-status">● Powered by Gemini</div>
-        </div>
-        <button class="ai-close" aria-label="Tutup">×</button>
-      </header>
+    <div id="bizoraPremiumContent">
+      <div class="premium-messages" id="bizoraPremiumMessages">
+        <div class="premium-message bot">
+          Halo! Saya Bizora AI Premium.
 
-      <div class="ai-messages">
-        <div class="ai-message bot">
-          Halo! Saya Bizora AI.
-
-          Saya siap membantu mengembangkan bisnis Anda.
-          Ada yang ingin Anda konsultasikan?
+          Saya siap membantu memberikan ide, strategi, dan analisis bisnis.
+          Apa yang ingin kamu diskusikan?
         </div>
       </div>
 
-      <div class="ai-suggestions">
-        <button data-question="Bagaimana cara meningkatkan penjualan?">
+      <div class="premium-suggestions">
+        <button type="button" data-premium-question="Berikan strategi meningkatkan penjualan toko saya.">
           Strategi penjualan
         </button>
-        <button data-question="Bagaimana mengatur stok toko?">
-          Manajemen stok
-        </button>
-        <button data-question="Berikan ide promosi untuk toko saya.">
+        <button type="button" data-premium-question="Berikan ide promosi yang menarik untuk pelanggan.">
           Ide promosi
         </button>
+        <button type="button" data-premium-question="Bagaimana cara mengelola bisnis agar lebih efisien?">
+          Efisiensi bisnis
+        </button>
       </div>
 
-      <div class="ai-input-area">
-        <div class="ai-input-row">
-          <input
-            class="ai-input"
-            type="text"
-            maxlength="4000"
-            placeholder="Tanyakan sesuatu..."
-          />
-          <button class="ai-send" aria-label="Kirim">↑</button>
-        </div>
-        <div class="ai-footer">
-          Bizora AI · Gemini · Jawaban AI dapat keliru
-        </div>
+      <div class="premium-input-row">
+        <input
+          class="premium-input"
+          id="bizoraPremiumInput"
+          type="text"
+          maxlength="4000"
+          placeholder="Tanyakan sesuatu kepada Bizora AI..."
+        >
+        <button
+          type="button"
+          class="premium-send"
+          id="bizoraPremiumSend"
+          aria-label="Kirim pesan"
+        >↑</button>
       </div>
-    </section>
+
+      <div class="premium-note">
+        Bizora AI menggunakan Gemini. Jawaban AI dapat keliru dan perlu diperiksa.
+        Saat ini AI belum membaca data toko secara langsung.
+      </div>
+    </div>
   `;
 
-  const $ = selector => root.querySelector(selector);
+  anchor.insertAdjacentElement("afterend", panel);
 
-  const launcher = $(".ai-launcher");
-  const panel = $(".ai-panel");
-  const close = $(".ai-close");
-  const messages = $(".ai-messages");
-  const input = $(".ai-input");
-  const send = $(".ai-send");
+  const messages = $("bizoraPremiumMessages");
+  const input = $("bizoraPremiumInput");
+  const send = $("bizoraPremiumSend");
+  const content = $("bizoraPremiumContent");
+  const badge = $("bizoraPremiumBadge");
 
   let busy = false;
+  let premiumTrialActive = false;
 
-  function addMessage(text, type) {
-    const message = document.createElement("div");
-    message.className = "ai-message " + type;
-    message.textContent = text;
-    messages.appendChild(message);
+  function addPremiumMessage(message, role) {
+    if (!messages) return;
+
+    const bubble = document.createElement("div");
+    bubble.className = "premium-message " + role;
+    bubble.textContent = message;
+
+    messages.appendChild(bubble);
     messages.scrollTop = messages.scrollHeight;
-    return message;
+
+    return bubble;
   }
 
-  function togglePanel() {
-    panel.classList.toggle("open");
+  function showPremiumLocked() {
+    premiumTrialActive = false;
 
-    if (panel.classList.contains("open")) {
-      setTimeout(() => input.focus(), 100);
+    if (badge) {
+      badge.textContent = "COMING SOON";
+      badge.style.background = "#f1f5f9";
+      badge.style.color = "#64748b";
+    }
+
+    content.innerHTML = `
+      <div class="premium-locked">
+        <strong>Bizora AI Premium sedang dalam pengembangan</strong>
+        <p>
+          Masa uji coba gratis 7 hari telah berakhir.
+          Fitur Premium sedang kami persiapkan agar dapat digunakan
+          dengan lebih lengkap dan optimal.
+        </p>
+      </div>
+    `;
+  }
+
+  async function checkPremiumTrial() {
+    try {
+      let currentUser = user;
+
+      if (!currentUser?.created_at) {
+        const { data, error } = await sb.auth.getUser();
+
+        if (error) throw error;
+        currentUser = data.user;
+      }
+
+      if (!currentUser?.created_at) {
+        throw new Error("Informasi tanggal pendaftaran akun tidak tersedia.");
+      }
+
+      const registeredAt = new Date(currentUser.created_at).getTime();
+
+      if (!Number.isFinite(registeredAt)) {
+        throw new Error("Tanggal pendaftaran akun tidak valid.");
+      }
+
+      const trialDuration = 7 * 24 * 60 * 60 * 1000;
+      const elapsed = Date.now() - registeredAt;
+      const remaining = trialDuration - elapsed;
+
+      if (remaining <= 0) {
+        showPremiumLocked();
+        return;
+      }
+
+      premiumTrialActive = true;
+
+      const daysRemaining = Math.ceil(
+        remaining / (24 * 60 * 60 * 1000)
+      );
+
+      if (badge) {
+        badge.textContent = `TRIAL · ${daysRemaining} HARI`;
+      }
+
+    } catch (error) {
+      console.error("Bizora Premium trial error:", error);
+
+      premiumTrialActive = false;
+
+      content.innerHTML = `
+        <div class="premium-locked">
+          <strong>Premium belum dapat diverifikasi</strong>
+          <p>
+            Silakan muat ulang aplikasi atau login kembali
+            untuk memeriksa status trial akun.
+          </p>
+        </div>
+      `;
     }
   }
 
-  launcher.addEventListener("click", togglePanel);
-
-  close.addEventListener("click", () => {
-    panel.classList.remove("open");
-  });
-
-  async function sendMessage(value) {
+  async function sendPremiumMessage(value) {
     const message = String(value || "").trim();
 
     if (!message || busy) return;
 
+    if (!premiumTrialActive) {
+      showToast("Masa trial Bizora AI Premium tidak aktif.");
+      return;
+    }
+
     if (typeof sb === "undefined" || !sb?.functions) {
-      addMessage(
+      addPremiumMessage(
         "Koneksi Supabase belum tersedia. Silakan login ulang.",
         "bot"
       );
@@ -3950,17 +3595,17 @@ if (document.readyState === "loading") {
     }
 
     busy = true;
+
     input.value = "";
     input.disabled = true;
     send.disabled = true;
 
-    addMessage(message, "user");
+    addPremiumMessage(message, "user");
 
-    const typing = document.createElement("div");
-    typing.className = "ai-typing";
-    typing.textContent = "Bizora AI sedang berpikir...";
-    messages.appendChild(typing);
-    messages.scrollTop = messages.scrollHeight;
+    const typing = addPremiumMessage(
+      "Bizora AI sedang berpikir...",
+      "bot"
+    );
 
     try {
       const { data, error } = await sb.functions.invoke(
@@ -3998,51 +3643,53 @@ if (document.readyState === "loading") {
         );
       }
 
-      addMessage(data.reply, "bot");
+      typing.remove();
+      addPremiumMessage(data.reply, "bot");
 
-    } catch (err) {
-      console.error("Bizora AI detail:", err);
+    } catch (error) {
+      console.error("Bizora AI detail:", error);
 
-      addMessage(
+      typing.remove();
+
+      addPremiumMessage(
         "Bizora AI mengalami kendala:\n" +
-        (err.message || "Kesalahan tidak diketahui."),
+        (error.message || "Kesalahan tidak diketahui."),
         "bot"
       );
 
     } finally {
-      typing.remove();
       busy = false;
-      input.disabled = false;
-      send.disabled = false;
-      input.focus();
+
+      if (input.isConnected) {
+        input.disabled = false;
+        input.focus();
+      }
+
+      if (send.isConnected) {
+        send.disabled = false;
+      }
     }
   }
 
   send.addEventListener("click", () => {
-    sendMessage(input.value);
+    sendPremiumMessage(input.value);
   });
 
   input.addEventListener("keydown", e => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      sendMessage(input.value);
+      sendPremiumMessage(input.value);
     }
   });
 
-  root.querySelectorAll("[data-question]").forEach(button => {
+  panel.querySelectorAll("[data-premium-question]").forEach(button => {
     button.addEventListener("click", () => {
-      sendMessage(button.dataset.question);
+      sendPremiumMessage(button.dataset.premiumQuestion);
     });
   });
 
-  window.openBizoraAI = () => {
-    if (!panel.classList.contains("open")) {
-      togglePanel();
-    }
-  };
-
+  checkPremiumTrial();
 })();
-
 
 </script>
 </body>
