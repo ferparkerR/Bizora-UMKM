@@ -1062,50 +1062,111 @@ function useAISuggestion(question){
 document.getElementById("aiQuestion").value=question;
 document.getElementById("aiQuestion").focus();
 }
-async function sendBizoraAI(){
-const question=document.getElementById("aiQuestion").value.trim();
-if(!question)return showMessage("aiMessage","Tulis pertanyaan terlebih dahulu.");
-if(!currentBusiness)return showMessage("aiMessage","Workspace bisnis tidak ditemukan.");
-const button=document.getElementById("aiSendButton");
-const answerBox=document.getElementById("aiAnswer");
-button.disabled=true;button.textContent="Bizora AI sedang berpikir...";
-answerBox.classList.remove("hidden");
-answerBox.textContent="Sedang menganalisis pertanyaan dan data bisnis kamu...";
-showMessage("aiMessage","");
-const sales=cache.transactions.filter(t=>t.type==="sale").reduce((s,t)=>s+Number(t.amount||0),0);
-const expenses=cache.expenses.reduce((s,e)=>s+Number(e.amount||0),0);
-const products=cache.products.map(p=>({
-nama:p.name,harga:Number(p.price||0),stok:Number(p.stock||0)
-}));
-const lowStock=products.filter(p=>p.stok<=5);
-const context=`
-Kamu adalah Bizora AI, asisten bisnis UMKM berbahasa Indonesia.
-Gunakan bahasa Indonesia yang ramah, ringkas, dan praktis.
-Jangan mengarang data yang tidak tersedia. Bedakan selisih pemasukan dengan laba bersih karena harga pokok produk mungkin belum tercatat.
-Data bisnis:
-Nama usaha: ${currentBusiness.business_name}
-Total penjualan tercatat: ${formatRupiah(sales)}
-Total pengeluaran tercatat: ${formatRupiah(expenses)}
-Selisih pemasukan: ${formatRupiah(sales-expenses)}
-Jumlah produk: ${products.length}
-Daftar produk: ${JSON.stringify(products)}
-Produk stok rendah (stok <= 5): ${JSON.stringify(lowStock)}
-Pertanyaan pengguna: ${question}
-Berikan analisis yang relevan, tidak bertele-tele, dan langkah yang bisa dilakukan.
-`;
-try{
-const {data,error}=await sb.functions.invoke("bizora-ai",{body:{message:context}});
-if(error)throw error;
-if(!data||!data.answer)throw new Error("Respons AI tidak ditemukan.");
-answerBox.textContent=data.answer;
-}catch(error){
-console.error("Bizora AI:",error);
-answerBox.textContent="Maaf, Bizora AI belum bisa menjawab. Periksa Edge Function bizora-ai dan konfigurasi secret OPENAI_API_KEY. Detail: "+error.message;
-}finally{
-button.disabled=false;button.textContent="Tanya Bizora AI";
-}
-}
 
+async function sendBizoraAI() {
+  const input = document.getElementById("aiInput");
+  const answerBox = document.getElementById("aiAnswer");
+
+  if (!input || !answerBox) return;
+
+  const message = input.value.trim();
+  if (!message) return;
+
+  answerBox.textContent = "Bizora AI sedang menganalisis bisnis kamu...";
+
+  try {
+    const businessId = currentBusiness?.id;
+
+    if (!businessId) {
+      throw new Error("Data bisnis tidak ditemukan. Silakan login ulang.");
+    }
+
+    const [productsRes, transactionsRes, expensesRes] =
+      await Promise.all([
+        sb.from("products").select("*").eq("business_id", businessId),
+        sb.from("transactions").select("*").eq("business_id", businessId),
+        sb.from("expenses").select("*").eq("business_id", businessId)
+      ]);
+
+    if (productsRes.error) throw productsRes.error;
+    if (transactionsRes.error) throw transactionsRes.error;
+    if (expensesRes.error) throw expensesRes.error;
+
+    const products = productsRes.data || [];
+    const transactions = transactionsRes.data || [];
+    const expenses = expensesRes.data || [];
+
+    const totalSales = transactions
+      .filter(t => t.type === "income" || t.type === "sale")
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
+
+    const totalExpenses = expenses.reduce(
+      (sum, e) => sum + Number(e.amount || 0), 0
+    );
+
+    const lowStock = products.filter(
+      p => Number(p.stock || 0) <= 5
+    );
+
+    const stockValue = products.reduce(
+      (sum, p) => sum + Number(p.stock || 0) * Number(p.price || 0), 0
+    );
+
+    const profit = totalSales - totalExpenses;
+
+    const money = value =>
+      "Rp" + Number(value).toLocaleString("id-ID");
+
+    const q = message.toLowerCase();
+    let answer = "";
+
+    if (/halo|hai|hello|pagi|siang|sore|malam/.test(q)) {
+      answer = "Halo! 👋 Saya Bizora AI, asisten bisnis kamu. Saya siap membantu menganalisis penjualan, pengeluaran, stok, dan strategi bisnis.";
+    }
+
+    else if (/omzet|penjualan|sales|pendapatan/.test(q)) {
+      answer = `📊 ANALISIS PENJUALAN\n\nTotal pemasukan tercatat: ${money(totalSales)}.\nJumlah transaksi tercatat: ${transactions.length}.\n\nSaran: pantau produk yang paling sering terjual dan evaluasi penjualan secara rutin.`;
+    }
+
+    else if (/pengeluaran|biaya|beban/.test(q)) {
+      answer = `💰 ANALISIS PENGELUARAN\n\nTotal pengeluaran tercatat: ${money(totalExpenses)}.\n\nSaran: evaluasi biaya operasional dan kurangi pengeluaran yang tidak memberikan nilai tambah.`;
+    }
+
+    else if (/untung|laba|profit|rugi/.test(q)) {
+      answer = `📈 ANALISIS KEUANGAN\n\nPemasukan: ${money(totalSales)}\nPengeluaran: ${money(totalExpenses)}\nSelisih: ${money(profit)}\n\n${profit >= 0 ? "Pemasukan lebih besar daripada pengeluaran." : "Pengeluaran lebih besar daripada pemasukan."}\n\nCatatan: ini selisih sederhana, belum tentu laba bersih karena belum memperhitungkan seluruh komponen biaya dan modal barang.`;
+    }
+
+    else if (/stok|persediaan|barang habis/.test(q)) {
+      answer = `📦 ANALISIS STOK\n\nJumlah produk: ${products.length}\nProduk dengan stok 5 atau kurang: ${lowStock.length}\n\n${lowStock.length ? lowStock.map(p => `• ${p.name}: ${p.stock} unit`).join("\n") : "Tidak ada produk dengan stok 5 unit atau kurang."}\n\nSaran: segera periksa produk yang stoknya menipis dan rencanakan pengadaan ulang.`;
+    }
+
+    else if (/strategi|meningkatkan penjualan|jualan|promosi/.test(q)) {
+      answer = `🚀 SARAN STRATEGI BISNIS\n\n1. Berikan promo bundling untuk produk yang saling melengkapi.\n2. Berikan diskon pada waktu penjualan yang biasanya sepi.\n3. Evaluasi produk dengan stok tinggi.\n4. Tingkatkan pelayanan dan kecepatan transaksi.\n5. Catat produk terlaris setiap minggu.\n\nData bisnis saat ini:\nPemasukan: ${money(totalSales)}\nJumlah produk: ${products.length}\nStok menipis: ${lowStock.length} produk.`;
+    }
+
+    else if (/modal|nilai stok|inventaris/.test(q)) {
+      answer = `📦 NILAI PERSEDIAAN\n\nEstimasi nilai stok berdasarkan harga jual: ${money(stockValue)}.\nJumlah produk: ${products.length}.\n\nCatatan: nilai ini menggunakan harga jual, bukan harga modal.`;
+    }
+
+    else if (/ringkasan|kondisi bisnis|analisis bisnis|laporan/.test(q)) {
+      answer = `📊 RINGKASAN BISNIS\n\nPemasukan: ${money(totalSales)}\nPengeluaran: ${money(totalExpenses)}\nSelisih: ${money(profit)}\nJumlah produk: ${products.length}\nTotal transaksi: ${transactions.length}\nStok menipis: ${lowStock.length}\n\nREKOMENDASI:\n${lowStock.length ? "• Periksa stok produk yang menipis.\n" : "• Pertahankan ketersediaan stok.\n"}${profit < 0 ? "• Evaluasi pengeluaran dan pemasukan.\n" : "• Pertahankan pengelolaan biaya.\n"}• Pantau penjualan secara rutin.`;
+    }
+
+    else {
+      answer = `🤖 Saya siap membantu bisnis kamu!\n\nCoba tanyakan:\n• Berapa total omzet saya?\n• Bagaimana kondisi keuntungan?\n• Produk apa yang stoknya menipis?\n• Bagaimana cara meningkatkan penjualan?\n• Berapa nilai persediaan saya?\n• Buatkan ringkasan bisnis saya.\n\nSaya menggunakan data toko yang tersimpan di Bizora untuk menjawab analisis tersebut.`;
+    }
+
+    answerBox.textContent = answer;
+
+    input.value = "";
+
+  } catch (error) {
+    console.error("Bizora AI:", error);
+    answerBox.textContent =
+      "Maaf, analisis gagal: " + (error.message || "Terjadi kesalahan.");
+  }
+}
+  
 // ======================================
 // SETTINGS EVENTS
 // ======================================
