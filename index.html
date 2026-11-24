@@ -3634,7 +3634,70 @@ document.addEventListener("DOMContentLoaded", function () {
 // ==========================================
 // END BIZORA THEME
 // ==========================================
-  
+
+  // ==========================================
+// HAPUS PRODUK BIZORA
+// ==========================================
+
+async function deleteProduct(productId) {
+  const product = products.find(
+    p => String(p.id) === String(productId)
+  );
+
+  if (!product) {
+    alert("Produk tidak ditemukan.");
+    return;
+  }
+
+  const confirmation = confirm(
+    `Yakin ingin menghapus produk "${product.name}"?\n\nProduk yang dihapus tidak bisa dikembalikan.`
+  );
+
+  if (!confirmation) return;
+
+  try {
+    const { error } = await sb
+      .from("products")
+      .delete()
+      .eq("id", productId)
+      .eq("business_id", business.id);
+
+    if (error) throw error;
+
+    // Hapus dari daftar produk lokal
+    products = products.filter(
+      p => String(p.id) !== String(productId)
+    );
+
+    // Hapus dari daftar Best Seller lokal
+    const featured = JSON.parse(
+      localStorage.getItem("bizora_featured") || "[]"
+    );
+
+    localStorage.setItem(
+      "bizora_featured",
+      JSON.stringify(
+        featured.filter(id => String(id) !== String(productId))
+      )
+    );
+
+    renderProducts();
+
+    if (typeof renderPOSProducts === "function") {
+      renderPOSProducts();
+    }
+
+    if (typeof renderDashboard === "function") {
+      renderDashboard();
+    }
+
+    alert("Produk berhasil dihapus!");
+
+  } catch (error) {
+    console.error("Gagal menghapus produk:", error);
+    alert("Gagal menghapus produk: " + error.message);
+  }
+}
 </script>
 </body>
 </html>
