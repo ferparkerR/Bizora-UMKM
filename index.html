@@ -527,6 +527,115 @@ th{color:var(--muted);font-weight:600}td{color:#dbe4f2}
 <div class="card"><div class="section-head"><h2>Detail laporan</h2></div><div id="reportTransactions"></div></div>
 </section>
 
+<section id="page-receipt-settings" class="page">
+
+  <div class="page-head">
+    <div>
+      <h1>Pengaturan Struk</h1>
+      <div class="subtitle">Atur tampilan struk sesuai identitas toko.</div>
+    </div>
+  </div>
+
+  <div class="grid two">
+
+    <div class="card">
+      <h2>Format kertas</h2>
+
+      <div class="field" style="margin-top:16px">
+        <label>Ukuran kertas struk</label>
+        <select id="receiptPaper">
+          <option value="58">58 mm</option>
+          <option value="80">80 mm</option>
+        </select>
+      </div>
+
+      <div class="field" style="margin-top:16px">
+        <label>Pesan pembuka</label>
+        <input id="receiptHeader" placeholder="Selamat datang di toko kami">
+      </div>
+
+      <div class="field" style="margin-top:16px">
+        <label>Pesan penutup</label>
+        <input id="receiptFooter" placeholder="Terima kasih sudah berbelanja!">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Informasi pada struk</h2>
+
+      <div style="display:grid;gap:17px;margin-top:18px">
+
+        <label>
+          <input type="checkbox" id="receiptShowAddress" style="width:auto">
+          Tampilkan alamat toko
+        </label>
+
+        <label>
+          <input type="checkbox" id="receiptShowPhone" style="width:auto">
+          Tampilkan nomor telepon
+        </label>
+
+        <label>
+          <input type="checkbox" id="receiptShowCashier" style="width:auto">
+          Tampilkan nama kasir
+        </label>
+
+        <label>
+          <input type="checkbox" id="receiptShowDiscount" style="width:auto">
+          Tampilkan diskon
+        </label>
+
+        <label>
+          <input type="checkbox" id="receiptShowPayment" style="width:auto">
+          Tampilkan metode pembayaran
+        </label>
+
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <div class="section-head">
+      <h2>Preview struk</h2>
+      <span class="badge">Contoh tampilan</span>
+    </div>
+
+    <div id="receiptPreview" style="
+      background:white;
+      color:#111;
+      max-width:350px;
+      margin:auto;
+      padding:20px;
+      border-radius:10px;
+      font-family:monospace;
+      text-align:center;
+    ">
+      <h2 id="receiptPreviewName">Nama Toko</h2>
+      <div id="receiptPreviewAddress" style="font-size:11px;margin-top:5px"></div>
+      <div id="receiptPreviewPhone" style="font-size:11px"></div>
+      <hr style="border:0;border-top:1px dashed #777;margin:12px 0">
+      <div id="receiptPreviewHeader"></div>
+      <p style="margin:12px 0">Contoh Produk × 1</p>
+      <hr style="border:0;border-top:1px dashed #777;margin:12px 0">
+      <div style="display:flex;justify-content:space-between">
+        <span>TOTAL</span>
+        <strong>Rp10.000</strong>
+      </div>
+      <div id="receiptPreviewFooter" style="margin-top:18px;font-size:12px"></div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn" onclick="saveReceiptSettings()">
+        Simpan Pengaturan Struk
+      </button>
+    </div>
+
+    <div id="receiptSettingsMessage" class="message"></div>
+  </div>
+
+</section>
+
 </main>
 </div>
 </div>
@@ -544,6 +653,7 @@ const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let currentUser=null;
 let currentBusiness=null;
 let storeProfile=null;
+let receiptSettings = null;
 let selectedStoreColor="#6366f1";
 let uploadedLogoFile=null;
 let cache={transactions:[],expenses:[],products:[]};
@@ -558,7 +668,16 @@ const navItems=[
 {id:"products",icon:"▦",label:"Produk"},
 {id:"transactions",icon:"↔",label:"Transaksi"},
 {id:"reports",icon:"▤",label:"Laporan"},
-{id:"settings",icon:"⚙",label:"Pengaturan"}
+{id:"settings",icon:"⚙",label:"Pengaturan"},
+  
+const navItems=[
+{id:"dashboard",icon:"⌂",label:"Dashboard"},
+{id:"cashier",icon:"🛒",label:"Kasir"},
+{id:"products",icon:"▦",label:"Produk"},
+{id:"transactions",icon:"↔",label:"Transaksi"},
+{id:"reports",icon:"▤",label:"Laporan"},
+{id:"settings",icon:"⚙",label:"Pengaturan"},
+{id:"receipt-settings",icon:"🧾",label:"Pengaturan Struk"}
 ];
 
 function navHTML(){
@@ -806,7 +925,147 @@ async function logout(){
 await sb.auth.signOut();
 location.reload();
 }
+  
+// ============================================
+// PENGATURAN STRUK
+// ============================================
 
+let receiptSettings = null;
+
+function getReceiptFormData(){
+  return {
+    business_id: currentBusiness.id,
+    paper_width: document.getElementById("receiptPaper").value,
+    header_message: document.getElementById("receiptHeader").value,
+    footer_message: document.getElementById("receiptFooter").value,
+    show_store_address: document.getElementById("receiptShowAddress").checked,
+    show_store_phone: document.getElementById("receiptShowPhone").checked,
+    show_cashier: document.getElementById("receiptShowCashier").checked,
+    show_discount: document.getElementById("receiptShowDiscount").checked,
+    show_payment_method: document.getElementById("receiptShowPayment").checked
+  };
+}
+
+async function loadReceiptSettings(){
+  if(!currentBusiness) return;
+
+  const {data,error} = await sb
+    .from("receipt_settings")
+    .select("*")
+    .eq("business_id",currentBusiness.id)
+    .maybeSingle();
+
+  if(error){
+    console.error("Gagal memuat pengaturan struk:",error);
+    return;
+  }
+
+  if(data){
+    receiptSettings = data;
+  }else{
+    const {data:newSettings,error:insertError} = await sb
+      .from("receipt_settings")
+      .insert({
+        business_id:currentBusiness.id
+      })
+      .select()
+      .single();
+
+    if(insertError){
+      console.error("Gagal membuat pengaturan struk:",insertError);
+      return;
+    }
+
+    receiptSettings = newSettings;
+  }
+
+  document.getElementById("receiptPaper").value = receiptSettings.paper_width || "80";
+  document.getElementById("receiptHeader").value = receiptSettings.header_message || "";
+  document.getElementById("receiptFooter").value = receiptSettings.footer_message || "";
+
+  document.getElementById("receiptShowAddress").checked = receiptSettings.show_store_address;
+  document.getElementById("receiptShowPhone").checked = receiptSettings.show_store_phone;
+  document.getElementById("receiptShowCashier").checked = receiptSettings.show_cashier;
+  document.getElementById("receiptShowDiscount").checked = receiptSettings.show_discount;
+  document.getElementById("receiptShowPayment").checked = receiptSettings.show_payment_method;
+
+  updateReceiptPreview();
+  setupReceiptPreviewEvents();
+}
+
+function updateReceiptPreview(){
+  const name =
+    storeProfile?.store_name ||
+    storeProfile?.name ||
+    currentBusiness?.name ||
+    "Nama Toko";
+
+  document.getElementById("receiptPreviewName").textContent = name;
+
+  document.getElementById("receiptPreviewAddress").textContent =
+    document.getElementById("receiptShowAddress").checked
+      ? (storeProfile?.address || "")
+      : "";
+
+  document.getElementById("receiptPreviewPhone").textContent =
+    document.getElementById("receiptShowPhone").checked
+      ? (storeProfile?.phone || "")
+      : "";
+
+  document.getElementById("receiptPreviewHeader").textContent =
+    document.getElementById("receiptHeader").value;
+
+  document.getElementById("receiptPreviewFooter").textContent =
+    document.getElementById("receiptFooter").value;
+}
+
+function setupReceiptPreviewEvents(){
+  const ids = [
+    "receiptPaper",
+    "receiptHeader",
+    "receiptFooter",
+    "receiptShowAddress",
+    "receiptShowPhone",
+    "receiptShowCashier",
+    "receiptShowDiscount",
+    "receiptShowPayment"
+  ];
+
+  ids.forEach(id=>{
+    const el = document.getElementById(id);
+
+    if(el.dataset.previewReady) return;
+
+    el.addEventListener("input",updateReceiptPreview);
+    el.addEventListener("change",updateReceiptPreview);
+
+    el.dataset.previewReady = "true";
+  });
+}
+
+async function saveReceiptSettings(){
+  if(!currentBusiness){
+    return showMessage("receiptSettingsMessage","Toko tidak ditemukan.");
+  }
+
+  const settings = getReceiptFormData();
+
+  const {data,error} = await sb
+    .from("receipt_settings")
+    .upsert(settings,{onConflict:"business_id"})
+    .select()
+    .single();
+
+  if(error){
+    console.error(error);
+    return showMessage("receiptSettingsMessage","Gagal menyimpan pengaturan struk: "+error.message);
+  }
+
+  receiptSettings = data;
+
+  showMessage("receiptSettingsMessage","Pengaturan struk berhasil disimpan!");
+}
+  
 // ============================================
 // INITIALIZATION
 // ============================================
@@ -829,6 +1088,7 @@ return;
 
 currentBusiness=data[0];
 await loadStoreSettings();
+await loadReceiptSettings();
 showDashboard();
 }
 
@@ -1035,83 +1295,111 @@ function receiptEscapeHTML(value){
 }
 
 function showReceipt(items, totals, payment){
-  const now = new Date();
-  const profile = typeof storeProfile !== "undefined" ? storeProfile : {};
+  const settings=receiptSettings||{};
+  const profile=storeProfile||{};
 
-  const storeName =
-    profile.store_name ||
-    currentBusiness?.business_name ||
-    "Bizora Store";
+  const storeName=profile.store_name||currentBusiness?.name||"Nama Toko";
+  const address=profile.address||"";
+  const phone=profile.phone||"";
 
-  const address = profile.store_address || "";
-  const phone = profile.store_phone || "";
+  const money=value=>"Rp"+Number(value||0).toLocaleString("id-ID");
 
-  const itemHTML = items.map(item => `
-    <div class="receipt-item">
-      <div><strong>${receiptEscapeHTML(item.name)}</strong></div>
-      <div class="receipt-row">
-        <span>${item.quantity} x ${formatRupiah(item.price)}</span>
-        <strong>${formatRupiah(item.price * item.quantity)}</strong>
+  const paperWidth=settings.paper_width||"80";
+
+  const showAddress=settings.show_store_address!==false;
+  const showPhone=settings.show_store_phone!==false;
+  const showCashier=settings.show_cashier!==false;
+  const showDiscount=settings.show_discount!==false;
+  const showPayment=settings.show_payment_method!==false;
+
+  let html=`
+    <div style="width:100%;max-width:${paperWidth==="58"?"58mm":"80mm"};margin:auto;font-family:monospace;color:#111;font-size:12px">
+      <div style="text-align:center">
+        <h2 style="margin:0 0 6px">${receiptEscapeHTML(storeName)}</h2>
+        ${showAddress&&address?`<div>${receiptEscapeHTML(address)}</div>`:""}
+        ${showPhone&&phone?`<div>${receiptEscapeHTML(phone)}</div>`:""}
+        ${settings.header_message?`<p>${receiptEscapeHTML(settings.header_message)}</p>`:""}
       </div>
-    </div>
-  `).join("");
 
-  document.getElementById("receiptContent").innerHTML = `
-    <div class="receipt-center">
-      <h2>${receiptEscapeHTML(storeName)}</h2>
-      ${address ? `<div class="receipt-muted">${receiptEscapeHTML(address)}</div>` : ""}
-      ${phone ? `<div class="receipt-muted">Telp: ${receiptEscapeHTML(phone)}</div>` : ""}
-      <div class="receipt-line"></div>
-      <strong>STRUK PEMBELIAN</strong>
-      <div class="receipt-muted">${now.toLocaleString("id-ID")}</div>
-    </div>
+      <hr style="border:0;border-top:1px dashed #777;margin:10px 0">
 
-    <div class="receipt-line"></div>
+      <div>Tanggal: ${new Date().toLocaleString("id-ID")}</div>
+      ${showCashier?`<div>Kasir: ${receiptEscapeHTML(currentUser?.email||"Pemilik Toko")}</div>`:""}
 
-    ${itemHTML}
+      <hr style="border:0;border-top:1px dashed #777;margin:10px 0">
+  `;
 
-    <div class="receipt-line"></div>
+  items.forEach(item=>{
+    const name=receiptEscapeHTML(item.name||item.product_name||"Produk");
+    const qty=Number(item.qty||item.quantity||0);
+    const price=Number(item.price||item.unit_price||0);
 
-    <div class="receipt-row">
-      <span>Subtotal</span>
-      <span>${formatRupiah(totals.subtotal)}</span>
-    </div>
-    <div class="receipt-row">
-      <span>Diskon</span>
-      <span>${formatRupiah(totals.discount)}</span>
-    </div>
-    <div class="receipt-row receipt-total">
-      <span>TOTAL</span>
-      <span>${formatRupiah(totals.total)}</span>
-    </div>
+    html+=`
+      <div style="margin-bottom:7px">
+        <div>${name}</div>
+        <div style="display:flex;justify-content:space-between">
+          <span>${qty} x ${money(price)}</span>
+          <span>${money(qty*price)}</span>
+        </div>
+      </div>
+    `;
+  });
 
-    <div class="receipt-line"></div>
+  html+=`
+      <hr style="border:0;border-top:1px dashed #777;margin:10px 0">
+      <div style="display:flex;justify-content:space-between">
+        <span>Subtotal</span>
+        <span>${money(totals.subtotal)}</span>
+      </div>
+  `;
 
-    <div class="receipt-row">
-      <span>Metode</span>
-      <span>${receiptEscapeHTML(payment)}</span>
-    </div>
-    <div class="receipt-row">
-      <span>Dibayar</span>
-      <span>${formatRupiah(totals.paid)}</span>
-    </div>
-    <div class="receipt-row">
-      <strong>Kembalian</strong>
-      <strong>${formatRupiah(totals.change)}</strong>
-    </div>
+  if(showDiscount&&Number(totals.discount||0)>0){
+    html+=`
+      <div style="display:flex;justify-content:space-between">
+        <span>Diskon</span>
+        <span>-${money(totals.discount)}</span>
+      </div>
+    `;
+  }
 
-    <div class="receipt-line"></div>
+  html+=`
+      <div style="display:flex;justify-content:space-between;font-weight:bold;margin-top:7px">
+        <span>TOTAL</span>
+        <span>${money(totals.total)}</span>
+      </div>
+  `;
 
-    <div class="receipt-thanks">
-      Terima kasih telah berbelanja!<br>
-      Semoga hari Anda menyenangkan.
+  if(showPayment){
+    html+=`<div style="margin-top:7px">Pembayaran: ${receiptEscapeHTML(String(payment||"-"))}</div>`;
+  }
+
+  html+=`
+      <hr style="border:0;border-top:1px dashed #777;margin:10px 0">
+      <div style="text-align:center;margin-top:10px">
+        ${receiptEscapeHTML(settings.footer_message||"Terima kasih sudah berbelanja!")}
+      </div>
     </div>
   `;
 
+  document.getElementById("receiptContent").innerHTML=html;
   document.getElementById("receiptArea").classList.remove("hidden");
 }
 
 function printReceipt(){
+  const width=receiptSettings?.paper_width||"80";
+
+  let style=document.getElementById("receiptDynamicPrintStyle");
+
+  if(!style){
+    style=document.createElement("style");
+    style.id="receiptDynamicPrintStyle";
+    document.head.appendChild(style);
+  }
+
+  style.textContent=`@media print {
+    @page { size: ${width}mm auto; margin: 4mm; }
+  }`;
+
   window.print();
 }
 
@@ -1468,6 +1756,139 @@ if(!document.getElementById("dashboard").classList.contains("hidden")){
 renderChart();
 }
 });
+
+async function loadReceiptSettings(){
+  if(!currentBusiness?.id) return;
+
+  const {data,error}=await sb
+    .from("receipt_settings")
+    .select("*")
+    .eq("business_id",currentBusiness.id)
+    .maybeSingle();
+
+  if(error){
+    console.error("Gagal memuat pengaturan struk:",error);
+    return;
+  }
+
+  if(data){
+    receiptSettings=data;
+  }else{
+    const defaults={
+      business_id:currentBusiness.id,
+      paper_width:"80",
+      header_message:"",
+      footer_message:"Terima kasih sudah berbelanja!",
+      show_store_address:true,
+      show_store_phone:true,
+      show_cashier:true,
+      show_discount:true,
+      show_payment_method:true
+    };
+
+    const {data:newData,error:insertError}=await sb
+      .from("receipt_settings")
+      .upsert(defaults,{onConflict:"business_id"})
+      .select()
+      .single();
+
+    if(insertError){
+      console.error("Gagal membuat pengaturan:",insertError);
+      return;
+    }
+
+    receiptSettings=newData;
+  }
+
+  document.getElementById("receiptPaper").value=receiptSettings.paper_width;
+  document.getElementById("receiptHeader").value=receiptSettings.header_message||"";
+  document.getElementById("receiptFooter").value=receiptSettings.footer_message||"";
+
+  document.getElementById("receiptShowAddress").checked=receiptSettings.show_store_address;
+  document.getElementById("receiptShowPhone").checked=receiptSettings.show_store_phone;
+  document.getElementById("receiptShowCashier").checked=receiptSettings.show_cashier;
+  document.getElementById("receiptShowDiscount").checked=receiptSettings.show_discount;
+  document.getElementById("receiptShowPayment").checked=receiptSettings.show_payment_method;
+
+  updateReceiptPreview();
+
+  const fields=[
+    "receiptPaper",
+    "receiptHeader",
+    "receiptFooter",
+    "receiptShowAddress",
+    "receiptShowPhone",
+    "receiptShowCashier",
+    "receiptShowDiscount",
+    "receiptShowPayment"
+  ];
+
+  fields.forEach(id=>{
+    const el=document.getElementById(id);
+    if(el){
+      el.oninput=updateReceiptPreview;
+      el.onchange=updateReceiptPreview;
+    }
+  });
+}
+
+function updateReceiptPreview(){
+  const name=storeProfile?.store_name||currentBusiness?.name||"Nama Toko";
+  const address=storeProfile?.address||"";
+  const phone=storeProfile?.phone||"";
+
+  document.getElementById("receiptPreviewName").textContent=name;
+  document.getElementById("receiptPreviewAddress").textContent=
+    document.getElementById("receiptShowAddress").checked?address:"";
+
+  document.getElementById("receiptPreviewPhone").textContent=
+    document.getElementById("receiptShowPhone").checked?phone:"";
+
+  document.getElementById("receiptPreviewHeader").textContent=
+    document.getElementById("receiptHeader").value;
+
+  document.getElementById("receiptPreviewFooter").textContent=
+    document.getElementById("receiptFooter").value;
+
+  const width=document.getElementById("receiptPaper").value;
+  document.getElementById("receiptPreview").style.width=
+    width==="58"?"230px":"100%";
+}
+
+async function saveReceiptSettings(){
+  if(!currentBusiness?.id){
+    return showMessage("receiptSettingsMessage","Sesi toko tidak ditemukan.");
+  }
+
+  const settings={
+    business_id:currentBusiness.id,
+    paper_width:document.getElementById("receiptPaper").value,
+    header_message:document.getElementById("receiptHeader").value.trim(),
+    footer_message:document.getElementById("receiptFooter").value.trim(),
+    show_store_address:document.getElementById("receiptShowAddress").checked,
+    show_store_phone:document.getElementById("receiptShowPhone").checked,
+    show_cashier:document.getElementById("receiptShowCashier").checked,
+    show_discount:document.getElementById("receiptShowDiscount").checked,
+    show_payment_method:document.getElementById("receiptShowPayment").checked,
+    updated_at:new Date().toISOString()
+  };
+
+  const {data,error}=await sb
+    .from("receipt_settings")
+    .upsert(settings,{onConflict:"business_id"})
+    .select()
+    .single();
+
+  if(error){
+    console.error(error);
+    return showMessage("receiptSettingsMessage","Gagal menyimpan pengaturan struk: "+error.message);
+  }
+
+  receiptSettings=data;
+  updateReceiptPreview();
+
+  showMessage("receiptSettingsMessage","Pengaturan struk berhasil disimpan!");
+}
 
 </script>
 </body>
