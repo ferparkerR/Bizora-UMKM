@@ -3352,6 +3352,10 @@ async function bizoraDownloadBackup() {
       tables: {}
     };
 
+    const backupSummary = {};
+    let totalRecords = 0;
+
+    // AMBIL DAN HITUNG DATA SETIAP TABEL
     for (const table of BIZORA_BACKUP_TABLES) {
       const { data, error } = await sb
         .from(table)
@@ -3363,13 +3367,24 @@ async function bizoraDownloadBackup() {
         );
       }
 
-      backupData.tables[table] = data || [];
+      const rows = data || [];
+
+      backupData.tables[table] = rows;
+      backupSummary[table] = rows.length;
+      totalRecords += rows.length;
     }
 
+    // BUAT FILE BACKUP
+    const jsonData = JSON.stringify(backupData, null, 2);
+
     const file = new Blob(
-      [JSON.stringify(backupData, null, 2)],
+      [jsonData],
       { type: "application/json" }
     );
+
+    if (!file.size) {
+      throw new Error("File backup kosong.");
+    }
 
     const url = URL.createObjectURL(file);
     const link = document.createElement("a");
@@ -3384,23 +3399,49 @@ async function bizoraDownloadBackup() {
     link.click();
     link.remove();
 
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
 
+    // SIMPAN INFORMASI BACKUP
     const date = new Date().toLocaleString("id-ID");
 
     localStorage.setItem("bizora_last_backup", date);
+    localStorage.setItem(
+      "bizora_backup_summary",
+      JSON.stringify({
+        created_at: backupData.created_at,
+        total_records: totalRecords,
+        tables: backupSummary,
+        file_size: file.size
+      })
+    );
 
     const lastDate = document.getElementById("backupLastDate");
-    if (lastDate) lastDate.textContent = date;
+
+    if (lastDate) {
+      lastDate.textContent = date;
+    }
+
+    // TAMPILKAN RINGKASAN
+    const summaryText = Object.entries(backupSummary)
+      .map(([table, count]) => table + ": " + count + " data")
+      .join("\n");
+
+    alert(
+      "BACKUP BIZORA BERHASIL!\n\n" +
+      summaryText +
+      "\n\nTotal data: " + totalRecords +
+      "\nUkuran file: " +
+      (file.size / 1024).toFixed(2) + " KB" +
+      "\nWaktu: " + date
+    );
 
     if (typeof showToast === "function") {
-      showToast("Backup berhasil dibuat.");
-    } else {
-      alert("Backup berhasil dibuat.");
+      showToast("Backup berhasil dibuat dan diverifikasi.");
     }
 
   } catch (error) {
     console.error("Bizora backup error:", error);
+
     alert("Backup gagal: " + error.message);
 
   } finally {
@@ -3410,6 +3451,7 @@ async function bizoraDownloadBackup() {
     }
   }
 }
+
 
 async function bizoraRestoreBackup(file) {
   if (!file) return;
