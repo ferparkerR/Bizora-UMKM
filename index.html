@@ -357,10 +357,21 @@ th{color:var(--muted);font-weight:600}td{color:#dbe4f2}
         <button class="btn" style="width:100%;margin-top:15px" onclick="checkout()">
           Proses Pembayaran
         </button>
+        
         <div id="posMessage" class="message"></div>
       </div>
     </div>
   </div>
+
+  <!-- AREA STRUK TOKO -->
+  <div id="receiptArea" class="card hidden">
+    <div id="receiptContent"></div>
+    <div class="form-actions no-print">
+      <button class="btn" onclick="printReceipt()">Cetak / Simpan PDF</button>
+      <button class="btn secondary" onclick="document.getElementById('receiptArea').classList.add('hidden')">Tutup</button>
+    </div>
+  </div>
+
 </section>
 
 <section id="page-transactions" class="page">
@@ -925,6 +936,98 @@ function renderCart(){
   document.getElementById("posChange").textContent=formatRupiah(totals.change);
 }
 
+
+function receiptEscapeHTML(value){
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&":"&amp;",
+    "<":"&lt;",
+    ">":"&gt;",
+    '"':"&quot;",
+    "'":"&#39;"
+  })[char]);
+}
+
+function showReceipt(items, totals, payment){
+  const now = new Date();
+  const profile = typeof storeProfile !== "undefined" ? storeProfile : {};
+
+  const storeName =
+    profile.store_name ||
+    currentBusiness?.business_name ||
+    "Bizora Store";
+
+  const address = profile.store_address || "";
+  const phone = profile.store_phone || "";
+
+  const itemHTML = items.map(item => `
+    <div class="receipt-item">
+      <div><strong>${receiptEscapeHTML(item.name)}</strong></div>
+      <div class="receipt-row">
+        <span>${item.quantity} x ${formatRupiah(item.price)}</span>
+        <strong>${formatRupiah(item.price * item.quantity)}</strong>
+      </div>
+    </div>
+  `).join("");
+
+  document.getElementById("receiptContent").innerHTML = `
+    <div class="receipt-center">
+      <h2>${receiptEscapeHTML(storeName)}</h2>
+      ${address ? `<div class="receipt-muted">${receiptEscapeHTML(address)}</div>` : ""}
+      ${phone ? `<div class="receipt-muted">Telp: ${receiptEscapeHTML(phone)}</div>` : ""}
+      <div class="receipt-line"></div>
+      <strong>STRUK PEMBELIAN</strong>
+      <div class="receipt-muted">${now.toLocaleString("id-ID")}</div>
+    </div>
+
+    <div class="receipt-line"></div>
+
+    ${itemHTML}
+
+    <div class="receipt-line"></div>
+
+    <div class="receipt-row">
+      <span>Subtotal</span>
+      <span>${formatRupiah(totals.subtotal)}</span>
+    </div>
+    <div class="receipt-row">
+      <span>Diskon</span>
+      <span>${formatRupiah(totals.discount)}</span>
+    </div>
+    <div class="receipt-row receipt-total">
+      <span>TOTAL</span>
+      <span>${formatRupiah(totals.total)}</span>
+    </div>
+
+    <div class="receipt-line"></div>
+
+    <div class="receipt-row">
+      <span>Metode</span>
+      <span>${receiptEscapeHTML(payment)}</span>
+    </div>
+    <div class="receipt-row">
+      <span>Dibayar</span>
+      <span>${formatRupiah(totals.paid)}</span>
+    </div>
+    <div class="receipt-row">
+      <strong>Kembalian</strong>
+      <strong>${formatRupiah(totals.change)}</strong>
+    </div>
+
+    <div class="receipt-line"></div>
+
+    <div class="receipt-thanks">
+      Terima kasih telah berbelanja!<br>
+      Semoga hari Anda menyenangkan.
+    </div>
+  `;
+
+  document.getElementById("receiptArea").classList.remove("hidden");
+}
+
+function printReceipt(){
+  window.print();
+}
+
 async function checkout(){
   if(!currentBusiness||!currentUser){
     return showMessage("posMessage","Sesi tidak ditemukan. Silakan login ulang.");
@@ -945,12 +1048,28 @@ async function checkout(){
   }
 
   const payment=document.getElementById("posPayment").value;
+
   const items=posCart.map(item=>({
     id:item.id,
     quantity:item.quantity
   }));
 
-  const button=document.querySelector('#page-cashier button[onclick="checkout()"]');
+  const receiptItems=posCart.map(item=>{
+    const product=cache.products.find(
+      p=>String(p.id)===String(item.id)
+    );
+
+    return {
+      name:product?.name || "Produk",
+      price:Number(product?.price || 0),
+      quantity:item.quantity
+    };
+  });
+
+  const button=document.querySelector(
+    '#page-cashier button[onclick="checkout()"]'
+  );
+
   button.disabled=true;
   button.textContent="Memproses...";
 
@@ -966,24 +1085,28 @@ async function checkout(){
     });
 
     if(error)throw error;
-    if(!data||!data.success)throw new Error("Transaksi belum berhasil.");
+    if(!data||!data.success){
+      throw new Error("Transaksi belum berhasil.");
+    }
+
+    const finalTotals={
+      subtotal:Number(data.subtotal ?? totals.subtotal),
+      discount:Number(data.discount ?? totals.discount),
+      total:Number(data.total ?? totals.total),
+      paid:Number(data.paid_amount ?? totals.paid),
+      change:Number(data.change_amount ?? totals.change)
+    };
 
     posCart=[];
     document.getElementById("posDiscount").value=0;
     document.getElementById("posPaid").value="";
+
+    showReceipt(receiptItems,finalTotals,payment);
+
     showMessage("posMessage","Pembayaran berhasil!");
 
     await loadDashboard();
     renderPOS();
-
-    alert(
-      "TRANSAKSI BERHASIL!\n\n"+
-      "Subtotal: "+formatRupiah(data.subtotal)+"\n"+
-      "Diskon: "+formatRupiah(data.discount)+"\n"+
-      "Total: "+formatRupiah(data.total)+"\n"+
-      "Dibayar: "+formatRupiah(data.paid_amount)+"\n"+
-      "Kembalian: "+formatRupiah(data.change_amount)
-    );
 
   }catch(error){
     console.error("Checkout error:",error);
@@ -1258,6 +1381,93 @@ if(!document.getElementById("dashboard").classList.contains("hidden")){
 renderChart();
 }
 });
+
+/* =========================
+   STRUK TOKO BIZORA
+========================= */
+
+#receiptArea {
+  max-width: 420px;
+  margin: 20px auto;
+  background: #fff;
+  color: #111;
+  border-radius: 12px;
+  padding: 22px;
+  font-family: monospace;
+}
+
+.receipt-center {
+  text-align: center;
+}
+
+.receipt-line {
+  border-top: 1px dashed #777;
+  margin: 12px 0;
+}
+
+.receipt-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 7px 0;
+  font-size: 13px;
+}
+
+.receipt-item {
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.receipt-muted {
+  font-size: 11px;
+  color: #555;
+}
+
+.receipt-total {
+  font-weight: 800;
+  font-size: 17px;
+}
+
+.receipt-thanks {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 12px;
+}
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm;
+  }
+
+  body * {
+    visibility: hidden !important;
+  }
+
+  #receiptArea,
+  #receiptArea * {
+    visibility: visible !important;
+  }
+
+  #receiptArea {
+    display: block !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    background: white !important;
+    color: black !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
 
 </script>
 </body>
